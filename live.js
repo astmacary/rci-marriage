@@ -310,8 +310,7 @@
       .filter(data => data.kind === "monthly-focus" && /^\d{4}-(0[1-9]|1[0-2])$/.test(data.month))
       .sort((a, b) => a.month.localeCompare(b.month));
     const currentMonth = day().slice(0, 7);
-    const selected = schedule.find(data => data.month === state.growMonth)
-      || schedule.find(data => data.month === currentMonth) || schedule[0];
+    const selected = schedule.find(data => data.month === currentMonth);
     const items = content.filter(({data}) => order.includes(data.kind) &&
       (!selected || (data.kind !== "challenge" && (!data.date || data.date.startsWith(selected.month + "-")))))
       .sort((a, b) => order.indexOf(a.data.kind) - order.indexOf(b.data.kind));
@@ -322,16 +321,17 @@
     const weekOf = { video: 0, devotional: 0, challenge: 1 };
     const now = i => i === w ? ' style="position:relative;border:2px solid var(--brand-gold)"' : "";
     const tag = i => i === w ? `<span class="pill" style="position:absolute;top:10px;right:10px;background:var(--brand-gold);color:var(--navy);font-weight:700">This week</span>` : "";
-    const focus = selected ? panel("Monthly focus", `<label for="grow-month" class="sub">Month</label>
-      <select id="grow-month">${schedule.map(data => `<option value="${esc(data.month)}"${data === selected ? " selected" : ""}>${esc(monthLabel(data.month))}</option>`).join("")}</select>
-      <h2>${esc(selected.focus)}</h2><p class="sub">Anchor verse · ${esc(selected.verse)}</p>`) : "";
+    const fr = FRUIT[parts().m - 1], wk = weekIndex();
+    const focus = `<section class="month" aria-label="This month’s focus"><div class="row"><span class="label">${esc(fr[0])} focus</span><span style="font-size:12px;color:#C9D2DD;letter-spacing:.08em">FRUIT OF OUR UNION</span></div>
+      <div class="name">${esc(selected?.focus || fr[1])}</div><div style="font-size:15px;line-height:1.4;color:#C9D2DD">${esc(selected?.verse || fr[2])}</div>
+      <div class="rhythm">${STEPS.map((step, i) => `<div class="${i < wk ? "done" : i === wk ? "now" : ""}">${step}${i < wk ? " ✓" : ""}</div>`).join("")}</div></section>`;
     return focus + (items.map(({item, data}) => `<section class="card"${now(weekOf[data.kind])}>${tag(weekOf[data.kind])}${label(kindLabel[data.kind])}
         ${data.kind === "video" ? `<div style="display:flex;gap:12px;align-items:center"><div class="video"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#C4955F"><path d="M8 5v14l11-7z"/></svg></div><div style="font-weight:700">${esc(item.fields.Title)}</div></div>` : `<div style="font-size:16px;font-weight:700">${esc(item.fields.Title)}</div>`}
         <p class="sub" style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer" style="font-weight:700">Open ${data.kind === "video" ? "video" : "resource"} ›</a>` : ""}</section>`).join("")
       || panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0)))
       + (selected ? panel("Week 2 · Water", `${tag(1)}<div style="font-size:16px;font-weight:700">Interactive for couples</div>${empty(selected.water)}`, now(1)) : "")
-      + panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with your Branch</div><button type="button" data-view="branch" class="linkbtn">Open your Branch ›</button>`, now(2))
-      + panel("Week 4 · Harvest", `${tag(3)}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="orchard" class="linkbtn">See Our Orchard ›</button>`, now(3));
+      + panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}</div>`, now(2))
+      + panel("Week 4 · Harvest", `${tag(3)}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="gather" class="linkbtn">Open the Gatherings calendar ›</button>`, now(3));
   }
   function branch() {
     const couple = profile();
@@ -622,11 +622,11 @@
       ${tile(`Took part in ${monthName[0]} so far`, `${tookPart} of ${roster.length}`, "Answered or checked in")}
       ${tile("Retreat interest", going("retreat"), "couples · RSVP’d yes")}
       ${tile("Open mentor requests", open.length, "Reach out within a week", open.length > 0)}</div>`;
-    const health = `<section class="card dash"><h2>Branch health</h2><div class="scroll"><table><thead><tr><th>Branch</th><th>Mentor couple</th><th>Sunday check-ins</th><th>Reveal Together this week</th><th>Status</th></tr></thead><tbody>${branches.map(b => {
+    const health = `<section class="card dash"><h2>Branch health</h2><div class="scroll"><table class="health"><thead><tr><th>Branch</th><th class="hide-sm">Mentor couple</th><th>Sunday check-ins</th><th>Reveal Together this week</th><th>Status</th></tr></thead><tbody>${branches.map(b => {
         const cs = roster.filter(c => (c.branch || "Unassigned") === b), n = cs.length;
         const ci = cs.filter(c => did(week, c, "checkedIn")).length, an = cs.filter(c => did(week, c, "answered")).length;
         const [st, cls] = status(n ? Math.max(ci, an) / n : 0);
-        return `<tr><td><b>${esc(b)}</b></td><td>${esc(mentorName(cs[0] || {}))}</td><td><span class="meter-row">${bar(ci, n)}${ci} of ${n}</span></td><td>${an} of ${n}</td><td><span class="pill st-${cls}">${st}</span></td></tr>`;
+        return `<tr><td><b>${esc(b)}</b></td><td class="hide-sm">${esc(mentorName(cs[0] || {}))}</td><td><span class="meter-row">${bar(ci, n)}${ci} of ${n}</span></td><td>${an} of ${n}</td><td><span class="pill st-${cls}">${st}</span></td></tr>`;
       }).join("") || `<tr><td colspan="5">No active couples are listed.</td></tr>`}</tbody></table></div>
       <label for="leader-week" class="sub" style="margin-top:6px">Week containing</label><input id="leader-week" type="date" value="${state.week}" style="max-width:220px"><p class="sub" style="font-size:13px">Week of ${esc(longDate(state.week))} · Monday through Sunday, Eastern time</p></section>`;
     const coupleOf = key => roster.find(c => c.coupleKey === key);
@@ -639,7 +639,7 @@
     const events = [["harvest", "Harvest Celebration"], ["retreat", "Marriage Retreat"]];
     const signups = `<section class="card dash"><h2>Sign-ups</h2>${state.errors.rsvps ? empty(state.errors.rsvps) : events.map(([k, name]) => `<div class="signup"><div class="row"><b>${name}</b><span>${going(k)} going</span></div>${bar(going(k), roster.length)}</div>`).join("")}</section>`;
     const content = (state.rows.content || []).map(item => D.read("content", item));
-    const cols = [["video", "Leader video"], ["devotional", "Devotional"], ["challenge", "Week 2 · Water"], ["gathering", "Gathering"]];
+    const cols = [["video", "Leader video"], ["devotional", "Devotional"]];
     const curM = Number(month.slice(5));
     const cell = (m, kind) => {
       const ym = `2027-${String(m).padStart(2, "0")}`;

@@ -142,6 +142,7 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 .signup .meter{width:100%}
 .cs-live{background:var(--navy);color:var(--cream)}.cs-ready{background:#DCE6F2;color:#1F4A70}.cs-none{background:var(--soft);color:var(--muted)}
 tr.cur td{background:var(--gold-soft)}
+@media (max-width:640px){.hide-sm{display:none}.health th,.health td{padding:9px 6px;font-size:13px}.health .meter{width:44px}.health .meter-row{gap:6px}.dash .scroll{margin:0 -4px}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tile b{font-size:28px}.cols>.main,.cols>.side{flex-basis:100%}}
 :root[data-theme="dark"] .head .seg{background:var(--surface);border:1px solid #1E2E44}
 /* dark mode: gold for the current page and highlights, bold only for headings */
 :root[data-theme="dark"] nav.tabs button[aria-current]{color:var(--brand-gold)}
@@ -283,7 +284,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "27";
+const APP_VERSION = "28";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -671,7 +672,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=24" defer></script>
-<script src="live.js?v=24" defer></script>
+<script src="src/data.js?v=25" defer></script>
+<script src="live.js?v=25" defer></script>
 </body>
 </html>
