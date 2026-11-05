@@ -238,7 +238,7 @@
     if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
     if (v === "gather") return T("Gatherings &amp; Special Dates");
     if (v === "profile") return T("My Profile");
-    if (v === "leaders") return T(`<span style="font-size:34px">How The Ministry Is Growing</span>`, `<span style="text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--fig)">Leader dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}</span><br><em style="font-size:13px">Participation only, never what couples write.</em>`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
+    if (v === "leaders") return T(`<span class="dash-title">How The Ministry Is Growing</span>`, `<span style="text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--fig)">Leader dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}</span><br><em style="font-size:13px">Participation only, never what couples write.</em>`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
     return H("", "RCI Marriage");
   }
   function today() {
@@ -310,7 +310,8 @@
       .filter(data => data.kind === "monthly-focus" && /^\d{4}-(0[1-9]|1[0-2])$/.test(data.month))
       .sort((a, b) => a.month.localeCompare(b.month));
     const currentMonth = day().slice(0, 7);
-    const selected = schedule.find(data => data.month === currentMonth);
+    const selected = schedule.find(data => data.month === currentMonth)
+      || schedule.find(data => data.month.slice(5) === currentMonth.slice(5)) || schedule[0];
     const items = content.filter(({data}) => order.includes(data.kind) &&
       (!selected || (data.kind !== "challenge" && (!data.date || data.date.startsWith(selected.month + "-")))))
       .sort((a, b) => order.indexOf(a.data.kind) - order.indexOf(b.data.kind));
@@ -515,7 +516,8 @@
     const pills = (name, value, opts) => `<div class="pills">${opts.map(o => `<label class="pill-check"><input type="radio" name="${name}" value="${o}" ${value === o ? "checked" : ""}><span>${o}</span></label>`).join("")}</div>`;
     const cover = c.couplePhoto ? `<img alt="Your couples photo" data-photo="${esc(c.couplePhoto)}" hidden class="cover"><div class="cover cover-empty">Loading photo…</div>`
       : `<div class="cover cover-empty">Add a couples photo</div>`;
-    return `<section class="card profile-card">
+    return `<div style="display:flex;justify-content:flex-end;margin-bottom:-4px"><button type="button" class="icon-round" data-view="leaders" aria-label="Leader view" title="Leader view"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></button></div>
+      <section class="card profile-card">
         <div class="cover-wrap">${cover}<label class="edit-btn cover-edit" for="pf-couple" aria-label="${c.couplePhoto ? "Change couples photo" : "Add couples photo"}">${PENCIL}</label><input id="pf-couple" type="file" accept="image/*" data-field="CouplePhoto" hidden></div>
         <div class="pair">
           <div class="person"><span class="face-wrap">${face(myPhotoChain(), myName(), 92)}<label class="edit-btn face-edit" for="pf-photo" aria-label="Change your photo">${PENCIL}</label></span><b>${esc(myName())}</b><span class="sub">You</span>
@@ -524,16 +526,16 @@
         </div>
         ${c.anniversary ? `<p class="sub" style="text-align:center;margin:0">💍 Married ${esc(longDate(c.anniversary))}</p>` : ""}
       </section>
-      <form data-form="profile" class="card" style="gap:12px">${label("About me")}
-        <span class="sub" style="font-size:13px;word-break:break-all">${esc(state.account?.username || "")}</span>
+      <form data-form="profile" class="card" style="gap:12px;position:relative">${label("About me")}
+        <button class="save-icon" type="submit" aria-label="Save profile" title="Save"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></button>
+        <span style="font-size:16px;word-break:break-all;color:var(--muted)">${esc(state.account?.username || "")}</span>
         <label for="pf-phone">Phone number</label><input id="pf-phone" type="tel" name="phone" maxlength="40" value="${esc(myPhone || "")}" placeholder="(555) 555-5555" autocomplete="tel">
         <label for="pf-bday">Birthday</label><input id="pf-bday" type="date" name="birthday" value="${esc(myBday || "")}">
         ${label("About us", ";margin-top:6px")}
         <label for="pf-anniv">Anniversary date</label><input id="pf-anniv" type="date" name="anniversary" value="${esc(c.anniversary || "")}">
         <span style="font-weight:600">Preferred contact method</span>${pills("contact", c.contact, ["Text", "Call", "Email"])}
         <span style="font-weight:600">Preferred gathering</span>${pills("gathering", c.gathering, ["In person", "Virtual"])}
-        <button class="btn" type="submit">Save</button><p class="form-status sub" role="status" style="margin:0"></p></form>
-      <button class="btn ghost" type="button" data-view="leaders">Leader view</button>
+        <p class="form-status sub" role="status" style="margin:0"></p></form>
       <button class="btn ghost" type="button" data-live="signout">Sign out</button>`;
   }
   async function resizeImage(file, max = 800) {
@@ -622,7 +624,7 @@
       ${tile(`Took part in ${monthName[0]} so far`, `${tookPart} of ${roster.length}`, "Answered or checked in")}
       ${tile("Retreat interest", going("retreat"), "couples · RSVP’d yes")}
       ${tile("Open mentor requests", open.length, "Reach out within a week", open.length > 0)}</div>`;
-    const health = `<section class="card dash"><h2>Branch health</h2><div class="scroll"><table class="health"><thead><tr><th>Branch</th><th class="hide-sm">Mentor couple</th><th>Sunday check-ins</th><th>Reveal Together this week</th><th>Status</th></tr></thead><tbody>${branches.map(b => {
+    const health = `<section class="card dash"><h2>Branch health</h2><div class="scroll"><table class="health"><thead><tr><th>Branch</th><th class="hide-sm">Mentor couple</th><th>Sunday <span class="br-sm">Check Ins</span></th><th>Reveal Together</th><th>Status</th></tr></thead><tbody>${branches.map(b => {
         const cs = roster.filter(c => (c.branch || "Unassigned") === b), n = cs.length;
         const ci = cs.filter(c => did(week, c, "checkedIn")).length, an = cs.filter(c => did(week, c, "answered")).length;
         const [st, cls] = status(n ? Math.max(ci, an) / n : 0);
