@@ -66,7 +66,10 @@
       if (!enable) throw new Error(push.message);
     } finally { push.busy = false; render(); }
   }
+  const pushDoneKey = "rci-marriage-push-on";
+  const pushDone = () => { try { return localStorage.getItem(pushDoneKey) === "1"; } catch { return false; } };
   function notifications() {
+    if (push.enabled || pushDone()) { if (push.enabled) { try { localStorage.setItem(pushDoneKey, "1"); } catch {} } return ""; }
     if (!pushSupported()) return card("Notifications", empty("On iPhone or iPad, add RCI Marriage to your Home Screen and open it from its icon."));
     const action = push.enabled ? ["push-off", "Turn off on this device"] : push.key ? ["push-on", "Enable notifications"] : ["push-check", "Check notification availability"];
     return card("Notifications", empty("Get RCI Marriage reminders on this device.") +
@@ -126,7 +129,7 @@
         : state.view === "checkin" ? ["checkins", "couples"]
         : state.view === "journal" ? ["couples", "answers"]
         : state.view === "orchard" ? ["couples", "content", "pilotIntake"]
-        : state.view === "branch" ? ["couples"]
+        : ["branch", "couple"].includes(state.view) ? ["couples"]
         : state.view === "grow" ? ["content", "couples"]
         : ["gather", "sealed"].includes(state.view) ? ["content", "pilotIntake", "couples"] : ["content", "answers", "couples", "pilotIntake"];
       await Promise.all(needed.map(load));
@@ -208,7 +211,7 @@
   function tabBar() {
     const cur = TAB_OF[state.view];
     const item = (id, view, text) => `<button type="button" data-view="${view}" ${cur === id ? 'aria-current="page"' : ""} ${state.loading ? "disabled" : ""}>${TAB_ICON[id]}${text}</button>`;
-    return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Today")}${item("us","checkin","Check In")}${item("branch","branch","Branch")}${item("gather","gather","Gatherings")}${item("profile","profile","Profile")}</div></nav>`;
+    return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Home")}${item("us","checkin","Check In")}${item("branch","branch","Branch")}${item("gather","gather","Gatherings")}${item("profile","profile","Profile")}</div></nav>`;
   }
   function usSeg(cur) {
     const a = (view, text) => `<button type="button" data-view="${view}" ${cur === view ? 'aria-current="page"' : ""}>${text}</button>`;
@@ -216,26 +219,21 @@
   }
   function header() {
     const v = state.view, f = FRUIT[parts().m - 1];
+    const T = (title, below = "", seg = "") => `<header class="head"><h1>${title}</h1>${below ? `<div class="eyebrow" style="font-weight:400">${below}</div>` : ""}${seg}</header>`;
     const H = (eyebrow, title, top = "") => top ? `<header class="head">${top}<h1 style="margin-top:6px">${title}</h1>${eyebrow ? `<div class="eyebrow" style="font-weight:400">${eyebrow}</div>` : ""}</header>` : `<header class="head">${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ""}<h1>${title}</h1></header>`;
     if (!state.account) return H("Fruit of Our Union · 2027", "Welcome");
-    if (v === "today") { const n = firstName(); return H(`${fmt({ weekday: "long", month: "long", day: "numeric" })} · Week ${weekIndex() + 1} of 4`, `Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}${n ? ", " + n : ""}`); }
+    if (v === "today") { const n = firstName(); return T(`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}${n ? ", " + n : ""}`, `${fmt({ weekday: "long", month: "long", day: "numeric" })} · Week ${weekIndex() + 1} of 4`); }
     if (v === "calendar") { const p = Object.values(monthPrompts()), c = p.filter(x => x.type === "Check-in").length; return H(`${f[2]} · ${p.length - c} prompts · ${c} check-ins`, `${f[0]} · ${f[1]}`); }
-    if (v === "checkin") return H(`Shared with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}`, "Sunday check-in", usSeg("checkin"));
-    if (v === "orchard") return H("Fills in month by month. Revealed in full at the Harvest Celebration.", "Our Orchard", usSeg("orchard"));
-    if (v === "journal") return H("Visible to both of you", "Our journal", usSeg("journal"));
-    if (v === "grow") return H(`${f[0]} · ${f[2]}`, `${f[1]}, week by week`, usSeg("grow"));
-    if (v === "branch") return H("Your Branch", esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
-    if (v === "gather") return H("RCI Marriage Ministry · 2027", "Gathering");
-    if (v === "profile") return H("Your profile and couple details", "Profile");
-    if (v === "leaders") return H("Leader dashboard", "How the ministry is growing");
+    if (v === "checkin") return T("Sunday check-in", `Your responses will be shared with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}.`, usSeg("checkin"));
+    if (v === "orchard") return T("Our Orchard", "Fills in month by month. Revealed in full at the Harvest Celebration.", usSeg("orchard"));
+    if (v === "journal") return T("Our journal", "Visible to both of you", usSeg("journal"));
+    if (v === "grow") return T(`${f[1]}, week by week`, `${f[0]} · ${f[2]}`, usSeg("grow"));
+    if (v === "branch") return T(esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
+    if (v === "couple") return T("Branch couple", "", `<button type="button" class="linkbtn" data-view="branch" style="color:var(--cream);min-height:32px">‹ Back to Branch</button>`);
+    if (v === "gather") return T("Gatherings &amp; Special Dates");
+    if (v === "profile") return T("Profile");
+    if (v === "leaders") return T("How the ministry is growing", "Leader dashboard", `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
     return H("", "RCI Marriage");
-  }
-  function accountStrip() {
-    if (!state.account) return "";
-    const leader = state.view === "leaders";
-    return `<div class="demo live-strip"><span>${esc(state.account.name || "Signed in")}</span><span style="display:flex;gap:6px;flex-wrap:wrap">
-      <button type="button" data-view="${leader ? "today" : "leaders"}" ${state.loading ? "disabled" : ""}>${leader ? "Couple view" : "Leader view"}</button>
-      <button type="button" data-live="refresh">Refresh</button><button type="button" data-live="signout">Sign out</button></span></div>`;
   }
   function today() {
     const content = (state.rows.content || []).map(item => ({ item, data: D.read("content", item) }));
@@ -326,13 +324,13 @@
       .sort((a, b) => (b.coupleKey === mine) - (a.coupleKey === mine)) : [];
     const roster = panel("Couples", mates.length ? `<div class="avatars">${mates.map(c => c.coupleKey === mine
       ? `<div><span style="background:var(--navy);color:var(--cream);border:2px solid var(--brand-gold)">${esc(initials(c))}</span>You</div>`
-      : `<div><span>${esc(initials(c))}</span>${esc(names(c))}</div>`).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned."), "");
+      : `<button type="button" class="av-btn" data-couple="${esc(c.itemId)}"><span>${esc(initials(c))}</span>${esc(names(c))}</button>`).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned."), "");
     return roster + panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div><p class="sub">Your Branch is 4–5 couples with a mentor couple. You meet in Grow week (week 3) to share and pray together.</p>`)
       + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc(couple?.mentor || "To be announced")}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p>${state.mentorSent ? `<p class="sub" style="font-weight:600;color:var(--fig)">Request sent. Your mentor couple will reach out.</p>` : `<button class="btn" type="button" data-live="mentor-request">We’d like our mentor couple to reach out</button>`}`);
   }
   function checkin() {
     return `<form data-form="checkin" style="display:flex;flex-direction:column;gap:12px">
-      <section class="card" style="gap:14px"><p class="sub" style="font-size:13px">This week, how much did you feel… (1 = not at all, 5 = very)</p>
+      <section class="card" style="gap:14px">${label("How we’re doing this week")}<p class="sub" style="font-size:13px">This week, how much did you feel… (1 = not at all, 5 = very)</p>
       ${["Connected", "Heard", "Spiritually together", "Having fun"].map((name, i) => `<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="font-size:15px;font-weight:600;padding:0;margin-bottom:6px">${name}</legend><div class="rates">${[1,2,3,4,5].map(n => `<label class="rate"><input type="radio" name="rating${i}" value="${n}" required><span>${n}</span></label>`).join("")}</div></fieldset>`).join("")}</section>
       <section class="card"><label for="live-need">One thing I need this week</label><input type="text" id="live-need" name="need" maxlength="6000" placeholder="e.g. a quiet evening, just us">
       <label for="live-saw" style="margin-top:6px">Where I saw God at work in you</label><input type="text" id="live-saw" name="saw" maxlength="6000" placeholder="e.g. with the kids at bedtime"></section>
@@ -466,10 +464,23 @@
       (async () => { for (const raw of chain) { const url = await photoUrl(raw); if (url) { img.src = url; img.hidden = false; img.nextElementSibling?.setAttribute("hidden", ""); return; } } })();
     });
   }
+  const PENCIL = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
   const initialsOf = name => String(name || "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?";
   const face = (raws, name, size) => `<span class="face" style="width:${size}px;height:${size}px;font-size:${Math.round(size / 2.8)}px"><img alt="" data-photo="${esc(raws)}" hidden><b>${esc(initialsOf(name))}</b></span>`;
   function myPhotoChain() { const c = profile(); return [c ? (mySide() === "spouse2" ? c.photo2 : c.photo1) : "", "me"].filter(Boolean).join("|"); }
   function myName() { const c = profile(); return (c ? (mySide() === "spouse2" ? c.spouse2Name : c.spouse1Name) : "") || state.account?.name || ""; }
+  function coupleView() {
+    const c = (state.rows.couples || []).map(item => D.read("couples", item)).find(x => x.itemId === state.coupleId);
+    if (!c) return card("Couple", empty("This couple isn’t available."));
+    return `<section class="card profile-card">
+        <div class="cover-wrap">${c.couplePhoto ? `<img alt="Couples photo" data-photo="${esc(c.couplePhoto)}" hidden class="cover"><div class="cover cover-empty">Loading photo…</div>` : `<div class="cover cover-empty">No couples photo yet</div>`}</div>
+        <div class="pair">
+          <div class="person">${face(c.photo1, c.spouse1Name, 92)}<b>${esc(c.spouse1Name || "—")}</b></div>
+          <div class="person">${face(c.photo2, c.spouse2Name, 92)}<b>${esc(c.spouse2Name || "—")}</b></div>
+        </div>
+        <p class="sub" style="text-align:center;margin:0">${c.anniversary ? `💍 Anniversary: ${esc(longDate(c.anniversary).replace(/, \d{4}$/, ""))}` : "Anniversary not added yet"}</p>
+      </section>`;
+  }
   function profileView() {
     const c = profile();
     if (state.errors.couples) return card("Profile", empty(state.errors.couples));
@@ -480,10 +491,10 @@
     const cover = c.couplePhoto ? `<img alt="Your couples photo" data-photo="${esc(c.couplePhoto)}" hidden class="cover"><div class="cover cover-empty">Loading photo…</div>`
       : `<div class="cover cover-empty">Add a couples photo</div>`;
     return `<section class="card profile-card">
-        <div class="cover-wrap">${cover}<label class="cover-btn" for="pf-couple">${c.couplePhoto ? "Change couples photo" : "Add couples photo"}</label><input id="pf-couple" type="file" accept="image/*" data-field="CouplePhoto" hidden></div>
+        <div class="cover-wrap">${cover}<label class="edit-btn cover-edit" for="pf-couple" aria-label="${c.couplePhoto ? "Change couples photo" : "Add couples photo"}">${PENCIL}</label><input id="pf-couple" type="file" accept="image/*" data-field="CouplePhoto" hidden></div>
         <div class="pair">
-          <div class="person">${face(myPhotoChain(), myName(), 92)}<b>${esc(myName())}</b><span class="sub">You</span>
-            <label class="btn ghost small" for="pf-photo">Change Photo</label><input id="pf-photo" type="file" accept="image/*" data-field="${mine}" hidden></div>
+          <div class="person"><span class="face-wrap">${face(myPhotoChain(), myName(), 92)}<label class="edit-btn face-edit" for="pf-photo" aria-label="Change your photo">${PENCIL}</label></span><b>${esc(myName())}</b><span class="sub">You</span>
+            <input id="pf-photo" type="file" accept="image/*" data-field="${mine}" hidden></div>
           <div class="person">${face(sp?.photo || "", sp?.name, 92)}<b>${esc(sp?.name || "Not added yet")}</b><span class="sub">Your spouse</span></div>
         </div>
         ${c.anniversary ? `<p class="sub" style="text-align:center;margin:0">💍 Married ${esc(longDate(c.anniversary))}</p>` : ""}
@@ -497,6 +508,7 @@
         <span style="font-weight:600">Preferred contact method</span>${pills("contact", c.contact, ["Text", "Call", "Email"])}
         <span style="font-weight:600">Preferred gathering</span>${pills("gathering", c.gathering, ["In person", "Virtual"])}
         <button class="btn" type="submit">Save</button><p class="form-status sub" role="status" style="margin:0"></p></form>
+      <button class="btn ghost" type="button" data-view="leaders">Leader view</button>
       <button class="btn ghost" type="button" data-live="signout">Sign out</button>`;
   }
   async function resizeImage(file, max = 800) {
@@ -589,15 +601,37 @@
     const account = state.account, wide = state.view === "leaders" && !!account;
     root.className = "app" + (wide ? " wide" : "");
     const bar = document.getElementById("brandbar"); if (bar && bar !== root) bar.className = "brandbar" + (wide ? " wide" : "");
-    const views = { profile: profileView, calendar, today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
-    root.innerHTML = header() + accountStrip() + `<main>
+    const views = { couple: coupleView, profile: profileView, calendar, today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
+    root.innerHTML = header() + `<main>
       ${!account ? card("Sign in", `<p class="sub">Sign in with your church Microsoft account to open your ministry data. The sign-in screen uses the shared RCI Productions registration.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}<a href="?demo=1">Explore the sample demo</a>`) :
-        `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.site && !state.loading && state.view === "today" ? notifications() : ""}${state.loading ? "" : !state.site ? empty("The connection is not ready. Refresh to retry.") : (views[state.view] || today)()}`}
+        `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.site && !state.loading && state.view === "today" ? notifications() : ""}${state.loading ? "" : !state.site ? empty("The connection is not ready. Pull down to refresh.") : (views[state.view] || today)()}`}
       </main>${account && !wide ? tabBar() : ""}`;
     if (typeof document.querySelector === "function") { headerPhoto(); hydratePhotos(); }
   }
   window.renderLive = render;
+  // Pull down at the top of any page to refresh (same as RCI Security).
+  if (typeof document.createElement === "function" && typeof addEventListener === "function") (function () {
+    const ind = document.createElement("div"); ind.id = "ptr"; ind.innerHTML = "<span>↓ Pull to refresh</span>";
+    if (document.body) document.body.appendChild(ind); else document.addEventListener("DOMContentLoaded", () => document.body.appendChild(ind));
+    let y0 = null, h = 0;
+    const editing = t => t && t.closest && t.closest("input,textarea,select,[contenteditable='true'],.grid7,.cal");
+    addEventListener("touchstart", e => { y0 = (window.scrollY <= 0 && e.touches.length === 1 && !editing(e.target) && !editing(document.activeElement)) ? e.touches[0].clientY : null; h = 0; }, { passive: true });
+    addEventListener("touchmove", e => {
+      if (y0 == null) return;
+      const dy = e.touches[0].clientY - y0;
+      if (dy <= 0 || window.scrollY > 0) { ind.style.height = "0"; h = 0; return; }
+      h = Math.min(dy * 0.5, 90); ind.style.height = h + "px";
+      const ready = h >= 60; ind.classList.toggle("ready", ready); ind.firstChild.textContent = ready ? "↻ Release to refresh" : "↓ Pull to refresh";
+    }, { passive: true });
+    addEventListener("touchend", async () => {
+      if (y0 == null) return; y0 = null;
+      if (h >= 60 && state.account && !state.loading) { ind.firstChild.textContent = "Refreshing…"; ind.style.height = "48px"; photos.clear(); await loadView(); }
+      ind.style.height = "0"; h = 0;
+    });
+  })();
   document.addEventListener("click", async event => {
+    const pick = event.target.closest("[data-couple]");
+    if (pick) { state.coupleId = pick.dataset.couple; state.view = "couple"; render(); window.scrollTo?.(0, 0); return; }
     const gday = event.target.closest("[data-gday]");
     if (gday) { state.gcal = { month: gday.dataset.gday.slice(0, 7), sel: gday.dataset.gday }; render(); return; }
     const gnav = event.target.closest("[data-gcal]");
