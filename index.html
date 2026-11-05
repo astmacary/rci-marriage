@@ -126,6 +126,7 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 .theme-line{display:flex;align-items:center;gap:6px;padding-left:12px;border-left:1px solid rgba(196,149,95,.5);min-width:0}
 .theme-line b{display:block;font-family:var(--display);font-size:15px;line-height:1.15;color:var(--cream);white-space:nowrap}
 .theme-line small{display:block;font-size:11px;color:#D4A66E;letter-spacing:.04em;white-space:nowrap}
+@media (max-width:420px){.brandbar div{padding-left:14px;padding-right:14px}.brand-theme{gap:8px}.brand-theme>img{height:40px;width:auto}.theme-line{padding-left:8px;gap:5px}.theme-line svg{width:15px;height:15px}.theme-line b{font-size:13px}.theme-line small{font-size:10px}#me-slot .me-btn{width:42px;height:42px}#me-slot .face{width:38px!important;height:38px!important}.theme-toggle{width:40px;height:40px}}
 #ptr{position:fixed;top:0;left:0;right:0;height:0;overflow:hidden;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:var(--surface);color:var(--muted);font-weight:600;font-size:13px;border-bottom:1px solid var(--line);transition:height .12s ease;padding-top:env(safe-area-inset-top,0px)}
 #ptr span{padding:0 0 12px}
 #ptr.ready{color:var(--fig)}
@@ -238,7 +239,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "14";
+const APP_VERSION = "15";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -626,7 +627,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=11" defer></script>
-<script src="live.js?v=11" defer></script>
+<script src="src/data.js?v=12" defer></script>
+<script src="live.js?v=12" defer></script>
 </body>
 </html>
