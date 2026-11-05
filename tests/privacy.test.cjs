@@ -102,3 +102,19 @@ test('failed SharePoint writes preserve the form and never report a successful s
   assert.equal(button.disabled, false);
   assert.doesNotMatch(app.root.innerHTML, /Saved to SharePoint\./);
 });
+
+test('answers and check-ins save to named SharePoint columns, not one text blob', () => {
+  const a = D.columns({ version: 1, kind: 'prompt-answer', date: '2027-01-04', answer: 'Fictional' }, 'c1');
+  assert.deepEqual(a, { PromptDate: '2027-01-04T12:00:00Z', Answer: 'Fictional', CoupleKey: 'c1' });
+  const c = D.columns({ version: 1, kind: 'check-in', date: '2027-01-03', ratings: [4, 3, 9, 0], need: 'n', saw: 's', mentor: true }, 'c1');
+  assert.equal(c.Connected, 4); assert.equal(c.Spiritual, null); assert.equal(c.Fun, null); assert.equal(c.MentorRequest, true);
+  assert.equal('AppData' in a || 'AppData' in c, false);
+});
+test('rows read from columns first and still read older AppData rows', () => {
+  const fromCols = D.read('content', { fields: { Title: 'What one word…?', Kind: 'Prompt', PromptType: 'Fun', PromptDate: '2027-01-01T12:00:00Z' } });
+  assert.equal(fromCols.kind, 'prompt'); assert.equal(fromCols.date, '2027-01-01'); assert.equal(fromCols.text, 'What one word…?');
+  const legacy = D.read('content', { fields: { Title: 'x', AppData: '{"kind":"prompt","date":"2027-01-02","text":"Old"}' } });
+  assert.equal(legacy.text, 'Old');
+  const couple = D.read('couples', { id: '7', fields: { Spouse1Email: 'a@example.org', Spouse2Email: 'b@example.org', CoupleKey: 'k7' } });
+  assert.equal(couple.kind, 'couple'); assert.deepEqual(couple.memberEmails, ['a@example.org', 'b@example.org']); assert.equal(couple.coupleKey, 'k7');
+});

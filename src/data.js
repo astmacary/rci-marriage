@@ -20,7 +20,46 @@
     if (JSON.stringify(data).length > 24000) throw new Error("Please shorten your response before saving.");
     return data;
   };
-  const api = { parse, own, escape, safeLink, validate };
+  // SharePoint date-only columns: write noon UTC so the day never shifts; read back as YYYY-MM-DD.
+  const toDate = day => day ? `${day}T12:00:00Z` : null;
+  const fromDate = value => value ? String(value).slice(0, 10) : "";
+  const str = v => v == null ? "" : String(v);
+  // Read a row from its named columns, falling back to the older AppData JSON.
+  const read = (key, item) => {
+    const f = item?.fields || {}, old = parse(item);
+    if (key === "content") return { ...old,
+      kind: f.Kind ? str(f.Kind).toLowerCase() : old.kind,
+      date: f.PromptDate ? fromDate(f.PromptDate) : old.date,
+      type: f.PromptType || old.type, week: f.Week || old.week,
+      text: f.Kind ? str(f.Title) : (old.text ?? str(f.Title)),
+      url: f.Link || old.url };
+    if (key === "couples") {
+      const emails = [f.Spouse1Email, f.Spouse2Email].filter(Boolean);
+      return { ...old, kind: old.kind || (emails.length ? "couple" : undefined),
+        memberEmails: emails.length ? emails : old.memberEmails,
+        branch: f.Branch || old.branch, mentorCouple: f.MentorCouple || old.mentorCouple,
+        coupleKey: f.CoupleKey || old.coupleKey || str(item?.id) };
+    }
+    if (key === "answers") return { ...old,
+      date: f.PromptDate ? fromDate(f.PromptDate) : old.date, answer: f.Answer ?? old.answer };
+    if (key === "checkins") return { ...old,
+      date: f.WeekOf ? fromDate(f.WeekOf) : old.date,
+      ratings: f.Connected != null ? [f.Connected, f.Heard, f.Spiritual, f.Fun] : old.ratings,
+      need: f.Need ?? old.need, saw: f.SawInYou ?? old.saw,
+      mentor: f.MentorRequest ?? old.mentor };
+    return old;
+  };
+  // Turn validated app data into the list's named columns.
+  const columns = (data, coupleKey) => {
+    if (data.kind === "prompt-answer") return { PromptDate: toDate(data.date), Answer: str(data.answer), CoupleKey: str(coupleKey) };
+    if (data.kind === "check-in") {
+      const r = data.ratings.map(n => (Number.isInteger(n) && n >= 1 && n <= 5) ? n : null);
+      return { WeekOf: toDate(data.date), Connected: r[0], Heard: r[1], Spiritual: r[2], Fun: r[3],
+        Need: str(data.need), SawInYou: str(data.saw), MentorRequest: !!data.mentor, CoupleKey: str(coupleKey) };
+    }
+    throw new Error("Please refresh the app before saving.");
+  };
+  const api = { parse, own, escape, safeLink, validate, read, columns, toDate, fromDate };
   root.RCIData = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof window === "undefined" ? globalThis : window);
