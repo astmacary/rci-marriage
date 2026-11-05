@@ -69,13 +69,13 @@
   const pushDoneKey = "rci-marriage-push-on";
   const pushDone = () => { try { return localStorage.getItem(pushDoneKey) === "1"; } catch { return false; } };
   function notifications() {
+    // Same rule as RCI Security: only an "Enable Notifications" prompt, and only when this device can turn them on.
     if (push.enabled || pushDone()) { if (push.enabled) { try { localStorage.setItem(pushDoneKey, "1"); } catch {} } return ""; }
-    if (!pushSupported()) return card("Notifications", empty("On iPhone or iPad, add RCI Marriage to your Home Screen and open it from its icon."));
-    const action = push.enabled ? ["push-off", "Turn off on this device"] : push.key ? ["push-on", "Enable notifications"] : ["push-check", "Check notification availability"];
-    return card("Notifications", empty("Get RCI Marriage reminders on this device.") +
-      (push.message ? `<p role="status">${esc(push.message)}</p>` : "") + (push.busy ? empty("Updating notifications…") : action[0] === "push-on"
-        ? `<button class="btn" type="button" data-live="push-on" style="background:#B23A48;color:#fff;border-color:#B23A48">Enable notifications</button>` : button(...action)));
+    if (!pushSupported() || !push.key || Notification.permission === "denied") return "";
+    return `<section class="card" style="gap:8px"><h2 class="label" style="margin:0;color:var(--fig)">Lock-Screen Notifications</h2><p class="sub">Receive reminders and ministry updates, even when the app is closed.</p>
+      ${push.message ? `<p role="alert" class="sub">${esc(push.message)}</p>` : ""}<button class="btn badge-red" type="button" data-live="push-on" ${push.busy ? "disabled" : ""}>${push.busy ? "Please wait…" : "Enable Notifications"}</button></section>`;
   }
+
   const siteUrl = `https://${C.siteHost}${C.sitePath}`;
   const longDate = ymd => { const [y, m, d] = String(ymd).split("-").map(Number); return new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, d))); };
   const day = D.ministryDay;
@@ -324,19 +324,17 @@
       .sort((a, b) => (b.coupleKey === mine) - (a.coupleKey === mine)) : [];
     const all = (state.rows.couples || []).map(item => D.read("couples", item)).filter(c => c.kind === "couple" && c.active !== false)
       .sort((a, b) => (b.coupleKey === mine) - (a.coupleKey === mine) || names(a).localeCompare(names(b)));
-    const circle = c => c.coupleKey === mine
-      ? `<div><span style="background:var(--navy);color:var(--cream);border:2px solid var(--brand-gold)">${esc(initials(c))}</span>You</div>`
-      : `<button type="button" class="av-btn" data-couple="${esc(c.itemId)}"><span>${esc(initials(c))}</span>${esc(names(c))}</button>`;
-    const ministry = panel(`The ministry · ${all.length} couple${all.length === 1 ? "" : "s"}`, all.length ? `<div class="avatars">${all.map(circle).join("")}</div>` : empty("Couples will appear here as they join."));
+    const circle = c => `<button type="button" class="av-btn${c.coupleKey === mine ? " me" : ""}" data-couple="${esc(c.itemId)}"><span><img alt="" data-photo="${esc(c.couplePhoto || "")}" hidden><b>${esc(initials(c))}</b></span>${c.coupleKey === mine ? "You" : esc(names(c))}</button>`;
+    const ministry = panel(`The ministry · ${all.length} couple${all.length === 1 ? "" : "s"}`, all.length ? `<div class="avatars big">${all.map(circle).join("")}</div>` : empty("Couples will appear here as they join."));
     const yours = panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div>
-      ${mates.length ? `<div class="avatars">${mates.map(circle).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned.")}
+      ${mates.length ? `<div class="avatars big">${mates.map(circle).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned.")}
       <p class="sub">Your Branch is 4–5 couples with a mentor couple. You meet in Grow week (week 3) to share and pray together.</p>`);
     return ministry + yours
       + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc(couple?.mentor || "To be announced")}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p>${state.mentorSent ? `<p class="sub" style="font-weight:600;color:var(--fig)">Request sent. Your mentor couple will reach out.</p>` : `<button class="btn" type="button" data-live="mentor-request">We’d like our mentor couple to reach out</button>`}`);
   }
   function checkin() {
     return `<form data-form="checkin" style="display:flex;flex-direction:column;gap:12px">
-      <section class="card" style="gap:14px">${label("How we’re doing this week")}<p class="sub" style="font-size:13px">This week, how much did you feel… (1 = not at all, 5 = very)</p>
+      <section class="card" style="gap:14px">${label("How we’re doing this week")}<p class="sub" style="font-size:15px;font-weight:600;color:var(--ink)">This week, how much did you feel… (1 = not at all, 5 = very)</p>
       ${["Connected", "Heard", "Spiritually together", "Having fun"].map((name, i) => `<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="font-size:15px;font-weight:600;padding:0;margin-bottom:6px">${name}</legend><div class="rates">${[1,2,3,4,5].map(n => `<label class="rate"><input type="radio" name="rating${i}" value="${n}" required><span>${n}</span></label>`).join("")}</div></fieldset>`).join("")}</section>
       <section class="card"><label for="live-need">One thing I need this week</label><input type="text" id="live-need" name="need" maxlength="6000" placeholder="e.g. a quiet evening, just us">
       <label for="live-saw" style="margin-top:6px">Where I saw God at work in you</label><input type="text" id="live-saw" name="saw" maxlength="6000" placeholder="e.g. with the kids at bedtime"></section>
@@ -446,8 +444,8 @@
         <button type="button" class="iconbtn" data-gcal="prev" aria-label="Previous month">‹</button><button type="button" class="iconbtn" data-gcal="next" aria-label="Next month">›</button></div>
         <div class="grid7">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(x => `<div class="dowh">${x}</div>`).join("")}${cells}</div></section>
       <h2 class="label" style="margin:4px 0 0;color:var(--muted)">${esc(longDate(sel))}</h2>${detail}
-      ${list.length ? `<h2 class="label" style="margin:4px 0 0;color:var(--muted)">2027 Gatherings</h2>${upcoming}` : ""}
-      <p class="sub" style="font-size:13px;font-style:italic;margin:0">These are projected dates, pending the church calendar.</p>`;
+      <h2 class="label" style="margin:4px 0 0;color:var(--muted)">2027 Gatherings</h2>
+      <p class="sub" style="font-size:13px;font-style:italic;margin:0">These are projected dates, pending the church calendar.</p>${upcoming}`;
   }
   // Profile: photos and preferences, saved to the couple's row in the Couples list.
   const photos = new Map();
