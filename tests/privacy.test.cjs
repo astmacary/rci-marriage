@@ -74,11 +74,11 @@ async function liveHarness({ deniedAnswers = false } = {}) {
   const clickView = async name => listeners.click({ target: { closest: selector => selector === '[data-view]' ? { dataset: { view: name } } : null } });
   return { root, calls, listeners, clickView };
 }
-test('leader view requests only its four lists, never private writing', async () => {
+test('leader view requests only its roster, status and request lists, never private writing', async () => {
   const app = await liveHarness(); app.calls.length = 0;
   await app.clickView('leaders');
-  assert.equal(app.calls.length, 4);
-  assert.ok(app.calls.every(({path}) => /\/lists\/(couples|participation|rsvps|content)\//.test(path)));
+  assert.ok(app.calls.length >= 4 && app.calls.length <= 5);
+  assert.ok(app.calls.every(({path}) => /\/lists\/(couples|participation|rsvps|content|mentorRequests)\//.test(path)));
   assert.doesNotMatch(app.root.innerHTML, /30 couples|Marcus|Tasha/);
 });
 test('journal reads the couple folder plus the reveal items SharePoint lets this user see', async () => {

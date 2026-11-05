@@ -124,6 +124,24 @@ input[type=date]{appearance:none;-webkit-appearance:none;min-height:48px;text-al
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 [hidden]{display:none!important}
+/* leader dashboard (layout from the demo, RCI Marriage colors) */
+.dash h2{font-family:var(--display);font-size:20px;margin:0}
+.dash-top{display:flex;justify-content:flex-end;margin-top:-6px}
+.dash-note{background:var(--navy);color:var(--cream);border:1px solid var(--brand-gold);padding:7px 12px}
+.tile.hot{border:2px solid var(--brand-gold)}
+.tile.hot>.sub:first-child{color:var(--fig)}
+.meter{display:inline-block;width:110px;height:8px;border-radius:999px;background:var(--soft);overflow:hidden;vertical-align:middle}
+.meter i{display:block;height:100%;background:var(--navy);border-radius:999px}
+:root[data-theme="dark"] .meter i{background:var(--brand-gold)}
+.meter-row{display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
+.st-good{background:#E3ECE2;color:#1F4A2E}.st-watch{background:#FDF1D8;color:#6B4800}.st-reach{background:#F6E2E2;color:#7A1F2B}
+.req{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:10px}
+.req>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.btn.small-btn{min-height:38px;font-size:13px;padding:0 12px;flex-shrink:0}
+.signup{display:flex;flex-direction:column;gap:6px}
+.signup .meter{width:100%}
+.cs-live{background:var(--navy);color:var(--cream)}.cs-ready{background:#DCE6F2;color:#1F4A70}.cs-none{background:var(--soft);color:var(--muted)}
+tr.cur td{background:var(--gold-soft)}
 :root[data-theme="dark"] .head .seg{background:var(--surface);border:1px solid #1E2E44}
 /* dark mode: gold for the current page and highlights, bold only for headings */
 :root[data-theme="dark"] nav.tabs button[aria-current]{color:var(--brand-gold)}
@@ -265,7 +283,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "25";
+const APP_VERSION = "26";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -653,7 +671,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=22" defer></script>
-<script src="live.js?v=22" defer></script>
+<script src="src/data.js?v=23" defer></script>
+<script src="live.js?v=23" defer></script>
 </body>
 </html>

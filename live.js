@@ -125,7 +125,7 @@
         const lists = await pages(`sites/${state.site.id}/lists?$select=id,displayName`);
         for (const [key, name] of Object.entries(C.lists)) state.lists[key] = lists.find(list => list.displayName === name)?.id;
       }
-      const needed = state.view === "leaders" ? ["couples", "participation", "rsvps", "content"]
+      const needed = state.view === "leaders" ? ["couples", "participation", "rsvps", "content", "mentorRequests"]
         : state.view === "checkin" ? ["checkins", "couples"]
         : state.view === "journal" ? ["couples", "answers"]
         : state.view === "orchard" ? ["couples", "content", "pilotIntake"]
@@ -232,7 +232,7 @@
     if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
     if (v === "gather") return T("Gatherings &amp; Special Dates");
     if (v === "profile") return T("My Profile");
-    if (v === "leaders") return T("How the ministry is growing", "Leader dashboard", `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
+    if (v === "leaders") return T("How the ministry is growing", `Leader dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
     return H("", "RCI Marriage");
   }
   function today() {
@@ -577,30 +577,61 @@
       iv: encode(iv), ciphertext: encode(bytes), wrappedKey: encode(wrapped) });
   }
   function leaders() {
-    if (state.errors.couples || state.errors.participation) {
-      return card("Weekly participation", empty(state.errors.couples || state.errors.participation));
-    }
-    const activity = (state.rows.participation || []).map(D.parse).filter(row => row.week === state.week);
-    const roster = (state.rows.couples || []).map(item => ({ ...D.read("couples", item), id: item.id, title: item.fields?.Title }))
-      .filter(couple => couple.kind === "couple" && couple.active !== false);
-    const branches = [...new Set(roster.map(couple => couple.branch || "Unassigned"))].sort();
-    const summary = branches.map(branch => card(branch, '<div style="overflow-x:auto"><table><thead><tr><th>Participant</th><th>Answered</th><th>Checked in</th></tr></thead><tbody>' +
-      roster.filter(couple => (couple.branch || "Unassigned") === branch).flatMap(couple => {
-        if (!Array.isArray(couple.members) || !couple.members.length) {
-          return [`<tr><td>${esc(couple.title)}</td><td colspan="2">Roster setup needed</td></tr>`];
-        }
-        const members = couple.members;
-        return members.map(member => {
-          const status = activity.filter(row => row.coupleId === couple.id && (!member.objectId || row.memberId === member.objectId.toLowerCase()));
-          return `<tr><td>${esc(member.name)}</td><td>${status.some(row => row.answered) ? "Yes" : "No record"}</td>
-            <td>${status.some(row => row.checkedIn) ? "Yes" : "No record"}</td></tr>`;
-        });
-      }).join("") + "</tbody></table></div>")).join("");
-    return card("Weekly participation", `<label for="leader-week">Week containing</label>
-      <input id="leader-week" type="date" value="${state.week}"><p class="sub">Week of ${state.week} · Monday through Sunday, Eastern time</p>`)
-      + (summary || empty("No active couples are listed."))
-      + ["rsvps", "content"].map(key => card(C.lists[key], state.errors[key] ? empty(state.errors[key]) :
-        `<a href="${esc(link(key))}" target="_blank" rel="noopener noreferrer">Open ${esc(C.lists[key])} in SharePoint</a>`)).join("");
+    if (state.errors.couples || state.errors.participation) return card("Leader dashboard", empty(state.errors.couples || state.errors.participation));
+    const roster = (state.rows.couples || []).map(item => ({ ...D.read("couples", item), id: String(item.id), title: item.fields?.Title || "" }))
+      .filter(c => c.kind === "couple" && c.active !== false);
+    const parts = (state.rows.participation || []).map(D.parse).filter(r => r.kind === "participation");
+    const month = day().slice(0, 7), monthName = FRUIT[Number(month.slice(5)) - 1];
+    const week = parts.filter(r => r.week === state.week);
+    const did = (rows, c, flag) => rows.some(r => String(r.coupleId) === c.id && (!flag || r[flag]));
+    const tookPart = roster.filter(c => parts.some(r => String(r.coupleId) === c.id && String(r.week || "").slice(0, 7) === month && (r.answered || r.checkedIn))).length;
+    const first = n => String(n || "").trim().split(/\s+/)[0];
+    const pairName = c => [first(c.spouse1Name), first(c.spouse2Name)].filter(Boolean).join(" & ") || c.title || "Couple";
+    const mentorName = c => { const emails = String(c.mentorCouple || "").toLowerCase().split(/[;,\s]+/).filter(Boolean);
+      const m = roster.find(x => (x.memberEmails || []).some(e => emails.includes(String(e).toLowerCase()))); return m ? pairName(m) : (emails.length ? "Assigned" : "—"); };
+    const rsvps = (state.rows.rsvps || []).map(D.parse).filter(r => r.kind === "rsvp" && r.response === "yes");
+    const going = ev => new Set(rsvps.filter(r => r.event === ev).map(r => String(r.coupleId))).size;
+    const requests = (state.rows.mentorRequests || []).map(item => ({ id: item.id, f: item.fields || {}, at: item.createdDateTime || "" }))
+      .sort((a, b) => b.at.localeCompare(a.at));
+    const open = requests.filter(r => (r.f.Status || "New") !== "Contacted");
+    const branches = [...new Set(roster.map(c => c.branch || "Unassigned"))].sort();
+    const status = pct => pct >= .8 ? ["Healthy", "good"] : pct >= .4 ? ["Watch", "watch"] : ["Reach out", "reach"];
+    const bar = (n, d) => `<span class="meter"><i style="width:${d ? Math.round(n / d * 100) : 0}%"></i></span>`;
+    const tile = (lbl, big, small, hot) => `<div class="tile${hot ? " hot" : ""}"><span class="sub">${lbl}</span><b>${big}</b><span class="sub" style="font-size:13px">${small}</span></div>`;
+    const tiles = `<div class="tiles">${tile("Couples enrolled", roster.length, `${branches.length} Branch${branches.length === 1 ? "" : "es"}`)}
+      ${tile(`Took part in ${monthName[0]} so far`, `${tookPart} of ${roster.length}`, "Answered or checked in")}
+      ${tile("Retreat interest", going("retreat"), "couples · RSVP’d yes")}
+      ${tile("Open mentor requests", open.length, "Reach out within a week", open.length > 0)}</div>`;
+    const health = `<section class="card dash"><h2>Branch health</h2><div class="scroll"><table><thead><tr><th>Branch</th><th>Mentor couple</th><th>Sunday check-ins</th><th>Reveal Together this week</th><th>Status</th></tr></thead><tbody>${branches.map(b => {
+        const cs = roster.filter(c => (c.branch || "Unassigned") === b), n = cs.length;
+        const ci = cs.filter(c => did(week, c, "checkedIn")).length, an = cs.filter(c => did(week, c, "answered")).length;
+        const [st, cls] = status(n ? Math.max(ci, an) / n : 0);
+        return `<tr><td><b>${esc(b)}</b></td><td>${esc(mentorName(cs[0] || {}))}</td><td><span class="meter-row">${bar(ci, n)}${ci} of ${n}</span></td><td>${an} of ${n}</td><td><span class="pill st-${cls}">${st}</span></td></tr>`;
+      }).join("") || `<tr><td colspan="5">No active couples are listed.</td></tr>`}</tbody></table></div>
+      <label for="leader-week" class="sub" style="margin-top:6px">Week containing</label><input id="leader-week" type="date" value="${state.week}" style="max-width:220px"><p class="sub" style="font-size:13px">Week of ${esc(longDate(state.week))} · Monday through Sunday, Eastern time</p></section>`;
+    const coupleOf = key => roster.find(c => c.coupleKey === key);
+    const mentor = `<section class="card dash"><h2>Mentor requests</h2>${state.errors.mentorRequests ? empty(state.errors.mentorRequests) : requests.slice(0, 8).map(r => {
+        const c = coupleOf(r.f.CoupleKey), when = r.at ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" }).format(new Date(r.at)) : "";
+        const done = (r.f.Status || "New") === "Contacted";
+        return `<div class="req"><div><b>${esc(c ? pairName(c) : r.f.CoupleKey || "Couple")}</b><span class="sub">${esc(r.f.Branch || c?.branch || "")}${when ? " · asked " + esc(when) : ""}</span></div>
+          <button type="button" class="btn ${done ? "" : "ghost"} small-btn" data-live="mentor-contacted" data-id="${esc(r.id)}" ${done ? "disabled" : ""}>${done ? "Contacted ✓" : "Mark contacted"}</button></div>`;
+      }).join("") || empty("No mentor requests yet.")}</section>`;
+    const events = [["harvest", "Harvest Celebration"], ["retreat", "Marriage Retreat"]];
+    const signups = `<section class="card dash"><h2>Sign-ups</h2>${state.errors.rsvps ? empty(state.errors.rsvps) : events.map(([k, name]) => `<div class="signup"><div class="row"><b>${name}</b><span>${going(k)} going</span></div>${bar(going(k), roster.length)}</div>`).join("")}</section>`;
+    const content = (state.rows.content || []).map(item => D.read("content", item));
+    const cols = [["video", "Leader video"], ["devotional", "Devotional"], ["challenge", "Couple challenge"], ["gathering", "Gathering"]];
+    const curM = Number(month.slice(5));
+    const cell = (m, kind) => {
+      const ym = `2027-${String(m).padStart(2, "0")}`, has = content.some(r => r.kind === kind && String(r.date || "").startsWith(ym));
+      const live = has && (day() >= ym + "-01");
+      return `<span class="pill cs-${live ? "live" : has ? "ready" : "none"}">${live ? "Live" : has ? "Ready" : "Not started"}</span>`;
+    };
+    const schedule = `<section class="card dash"><div class="row" style="flex-wrap:wrap"><h2>Content schedule · 2027</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill cs-live">Live</span><span class="pill cs-ready">Ready</span><span class="pill cs-none">Not started</span></span></div>
+      <div class="scroll"><table><thead><tr><th>Month</th><th>Fruit</th>${cols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${FRUIT.map((f, i) =>
+        `<tr${day().startsWith("2027-") && i + 1 === curM ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)}</b></td><td>${esc(f[1])}</td>${cols.map(c => `<td>${cell(i + 1, c[0])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+      <p class="sub" style="font-size:13px">“Ready” means it’s in Monthly Content with a date that hasn’t arrived yet. <a href="${esc(link("content"))}" target="_blank" rel="noopener noreferrer">Open Monthly Content in SharePoint</a></p></section>`;
+    return `<div class="dash-top"><span class="pill dash-note">Participation only, never what couples write</span></div>${tiles}
+      <div class="cols"><div class="main">${health}</div><div class="side">${mentor}${signups}</div></div>${schedule}`;
   }
   function render() {
     const account = state.account, wide = state.view === "leaders" && !!account;
@@ -656,6 +687,11 @@
       if (target.dataset.live === "refresh" && !state.loading) await loadView();
       if (target.dataset.live === "push-check") await checkPush();
       if (target.dataset.live === "push-on") await changePush(true);
+      if (target.dataset.live === "mentor-contacted") {
+        target.disabled = true;
+        await graph(`${base("mentorRequests")}/items/${encodeURIComponent(target.dataset.id)}/fields`, { method: "PATCH", body: JSON.stringify({ Status: "Contacted" }) });
+        await load("mentorRequests"); render();
+      }
       if (target.dataset.live === "mentor-request") {
         const c = profile(); if (!c) throw new Error("No couple profile");
         target.disabled = true;
