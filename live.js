@@ -194,6 +194,12 @@
   const FRUIT_COLOR = ["#2F5D3F","#B23A48","#D99A1E","#3E7CB1","#C4955F","#C77D3A","#5B7F3A","#6B4F9E","#4F8A8B","#8A5A44","#B8860B","#C4955F"];
   const STEPS = ["Plant","Water","Grow","Harvest"];
   const parts = () => { const [y,m,d] = day().split("-").map(Number); return { y, m, d, date: new Date(Date.UTC(y, m - 1, d)) }; };
+  const monthFocus = month => (state.rows.content || []).map(D.parse)
+    .find(row => row.kind === "monthly-focus" && row.month === month);
+  function currentFruit() {
+    const fallback = FRUIT[parts().m - 1], planned = monthFocus(day().slice(0, 7));
+    return planned ? [fallback[0], planned.focus, planned.verse] : fallback;
+  }
   const fmt = (opts) => new Intl.DateTimeFormat("en-US", { timeZone: "UTC", ...opts }).format(parts().date);
   const weekIndex = () => Math.min(3, Math.floor((parts().d - 1) / 7));
   const firstName = () => esc(String(myName() || "").replace(/^pastor\s+/i, "").split(/[\s,]+/).filter(Boolean)[0] || "");
@@ -218,12 +224,12 @@
     return `<div class="seg seg4">${a("grow","Grow")}${a("checkin","Check-in")}${a("orchard","Our Orchard")}${a("journal","Journal")}</div>`;
   }
   function header() {
-    const v = state.view, f = FRUIT[parts().m - 1];
+    const v = state.view, f = currentFruit();
     const T = (title, below = "", seg = "") => `<header class="head"><h1>${title}</h1>${below ? `<div class="eyebrow" style="font-weight:400">${below}</div>` : ""}${seg}</header>`;
     const H = (eyebrow, title, top = "") => top ? `<header class="head">${top}<h1 style="margin-top:6px">${title}</h1>${eyebrow ? `<div class="eyebrow" style="font-weight:400">${eyebrow}</div>` : ""}</header>` : `<header class="head">${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ""}<h1>${title}</h1></header>`;
     if (!state.account) return H("Fruit of Our Union · 2027", "Welcome");
     if (v === "today") { const n = firstName(); return T(`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}${n ? ", " + n : ""}`, `${fmt({ weekday: "long", month: "long", day: "numeric" })} · Week ${weekIndex() + 1} of 4`); }
-    if (v === "calendar") { const p = Object.values(monthPrompts()), c = p.filter(x => x.type === "Check-in").length; return H(`${f[2]} · ${p.length - c} prompts · ${c} check-ins`, `${f[0]} · ${f[1]}`); }
+    if (v === "calendar") { const p = Object.values(monthPrompts()), c = p.filter(x => x.type === "Check-in").length; return H(`${esc(f[2])} · ${p.length - c} prompts · ${c} check-ins`, `${esc(f[0])} · ${esc(f[1])}`); }
     if (v === "checkin") return T("Sunday check-in", `Your responses will be shared with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}.`, usSeg("checkin"));
     if (v === "orchard") return T("Our Orchard", "Fills in month by month. Revealed in full at the Harvest Celebration.", usSeg("orchard"));
     if (v === "journal") return T("Our journal", "Visible to both of you", usSeg("journal"));
@@ -238,7 +244,7 @@
   function today() {
     const content = (state.rows.content || []).map(item => ({ item, data: D.read("content", item) }));
     const prompt = content.find(({data}) => data.kind === "prompt" && data.date === day());
-    const f = FRUIT[parts().m - 1], w = weekIndex();
+    const f = currentFruit(), w = weekIndex();
     const hero = `<section class="month" aria-label="This month"><div class="row"><span class="label">${esc(f[0])} fruit</span><span style="font-size:12px;color:#C9D2DD;letter-spacing:.08em">FRUIT OF OUR UNION</span></div>
       <div class="name">${esc(f[1])}</div><div style="font-size:15px;line-height:1.4;color:#C9D2DD">${esc(f[2])}</div>
       <div class="rhythm">${STEPS.map((step, i) => `<div class="${i < w ? "done" : i === w ? "now" : ""}">${step}${i < w ? " ✓" : ""}</div>`).join("")}</div></section>`;
@@ -633,16 +639,18 @@
     const events = [["harvest", "Harvest Celebration"], ["retreat", "Marriage Retreat"]];
     const signups = `<section class="card dash"><h2>Sign-ups</h2>${state.errors.rsvps ? empty(state.errors.rsvps) : events.map(([k, name]) => `<div class="signup"><div class="row"><b>${name}</b><span>${going(k)} going</span></div>${bar(going(k), roster.length)}</div>`).join("")}</section>`;
     const content = (state.rows.content || []).map(item => D.read("content", item));
-    const cols = [["video", "Leader video"], ["devotional", "Devotional"], ["challenge", "Couple challenge"], ["gathering", "Gathering"]];
+    const cols = [["video", "Leader video"], ["devotional", "Devotional"], ["challenge", "Week 2 · Water"], ["gathering", "Gathering"]];
     const curM = Number(month.slice(5));
     const cell = (m, kind) => {
-      const ym = `2027-${String(m).padStart(2, "0")}`, has = content.some(r => r.kind === kind && String(r.date || "").startsWith(ym));
-      const live = has && (day() >= ym + "-01");
+      const ym = `2027-${String(m).padStart(2, "0")}`;
+      const water = kind === "challenge" && monthFocus(ym)?.water;
+      const has = water || content.some(r => r.kind === kind && String(r.date || "").startsWith(ym));
+      const live = has && day() >= ym + (water ? "-08" : "-01");
       return `<span class="pill cs-${live ? "live" : has ? "ready" : "none"}">${live ? "Live" : has ? "Ready" : "Not started"}</span>`;
     };
     const schedule = `<section class="card dash"><div class="row" style="flex-wrap:wrap"><h2>Content schedule · 2027</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill cs-live">Live</span><span class="pill cs-ready">Ready</span><span class="pill cs-none">Not started</span></span></div>
       <div class="scroll"><table><thead><tr><th>Month</th><th>Fruit</th>${cols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${FRUIT.map((f, i) =>
-        `<tr${day().startsWith("2027-") && i + 1 === curM ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)}</b></td><td>${esc(f[1])}</td>${cols.map(c => `<td>${cell(i + 1, c[0])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+        `<tr${day().startsWith("2027-") && i + 1 === curM ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)}</b></td><td>${esc(monthFocus(`2027-${String(i + 1).padStart(2, "0")}`)?.focus || f[1])}</td>${cols.map(c => `<td>${cell(i + 1, c[0])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
       <p class="sub" style="font-size:13px">“Ready” means it’s in Monthly Content with a date that hasn’t arrived yet.</p></section>`;
     return `${tiles}
       <div class="cols"><div class="main">${health}</div><div class="side">${mentor}${signups}</div></div>${schedule}`;
