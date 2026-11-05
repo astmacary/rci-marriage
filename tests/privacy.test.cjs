@@ -118,3 +118,6 @@ test('rows read from columns first and still read older AppData rows', () => {
   const couple = D.read('couples', { id: '7', fields: { Spouse1Email: 'a@example.org', Spouse2Email: 'b@example.org', CoupleKey: 'k7' } });
   assert.equal(couple.kind, 'couple'); assert.deepEqual(couple.memberEmails, ['a@example.org', 'b@example.org']); assert.equal(couple.coupleKey, 'k7');
 });
+test('couple journal link comes from the JournalItemId column', () => {
+  assert.equal(D.read('couples', { fields: { Spouse1Email: 'a@example.org', JournalItemId: '12' } }).journalItemId, '12');
+});

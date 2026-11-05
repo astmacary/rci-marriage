@@ -38,7 +38,8 @@
       return { ...old, kind: old.kind || (emails.length ? "couple" : undefined),
         memberEmails: emails.length ? emails : old.memberEmails,
         branch: f.Branch || old.branch, mentorCouple: f.MentorCouple || old.mentorCouple,
-        coupleKey: f.CoupleKey || old.coupleKey || str(item?.id) };
+        coupleKey: f.CoupleKey || old.coupleKey || str(item?.id),
+        journalItemId: f.JournalItemId || old.journalItemId };
     }
     if (key === "answers") return { ...old,
       date: f.PromptDate ? fromDate(f.PromptDate) : old.date, answer: f.Answer ?? old.answer };
