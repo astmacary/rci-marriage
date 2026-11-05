@@ -1,12 +1,12 @@
 // Run on a private scheduler with a managed identity. Never run in the browser.
 const { privateDecrypt, createDecipheriv, constants } = require("node:crypto");
-const { parse, read: readRow, ministryDay, weekStart, instant, events } = require("../src/data.js");
+const { parse, read: readRow, ministryDay, weekStart, monthlyRelease, instant, events } = require("../src/data.js");
 
 const origin = "https://graph.microsoft.com";
 const season = "2027";
 const lower = value => String(value || "").toLowerCase();
 
-function project(roster, answers, checkins, intake, published, now, releaseAt) {
+function project(roster, answers, checkins, intake, published, now) {
   const couples = roster.filter(row => row.data.kind === "couple" && row.data.active !== false);
   const members = new Map();
   const folders = new Set();
@@ -26,10 +26,6 @@ function project(roster, answers, checkins, intake, published, now, releaseAt) {
   const rsvps = new Map();
   const journals = new Map();
   const eventKeys = new Set(published.filter(row => row.kind === "event" && row.season === season).map(row => row.event));
-  const release = published.find(row => row.kind === "sealed-release" && row.season === season);
-  const releaseTime = instant(releaseAt);
-  const canRelease = Number.isFinite(releaseTime) && releaseTime === instant(release?.releaseAt) &&
-    releaseTime > Date.parse("2027-01-29T05:00:00Z") && now >= releaseTime;
 
   function record(row, source) {
     const memberId = lower(row.createdBy?.user?.id);
@@ -58,10 +54,12 @@ function project(roster, answers, checkins, intake, published, now, releaseAt) {
         version: 1, kind: "rsvp", event: data.event, season, coupleId: couple.id, memberId, response: data.response, updated
       });
     }
-    if (source === "pilotIntake" && canRelease && data.kind === "sealed-note" && data.season === season &&
-        row.fields?.Title === "sealed:2027" && date >= "2027-01-29" && date.startsWith(season + "-") && updated < releaseTime) {
-      const previous = journal.notes.get(memberId);
-      if (!previous || created < previous.created) journal.notes.set(memberId, { id: row.id, author: name, data, created });
+    const releaseTime = monthlyRelease(month);
+    if (source === "pilotIntake" && now >= releaseTime && data.kind === "sealed-note" && data.season === season &&
+        data.month === month && row.fields?.Title === `sealed:${month}` && date >= "2027-01-29" && date.startsWith(season + "-") && updated < releaseTime) {
+      const key = `${month}:${memberId}`;
+      const previous = journal.notes.get(key);
+      if (!previous || created < previous.created) journal.notes.set(key, { month, memberId, author: name, data, created });
     }
   }
   answers.forEach(row => record(row, "answers"));
@@ -90,8 +88,8 @@ async function managedToken() {
   return (await response.json()).access_token;
 }
 
-async function run() {
-  const { RCI_SITE_ID, RCI_RELEASE_AT, RCI_SEALED_PRIVATE_KEY } = process.env;
+async function run(log = console.log) {
+  const { RCI_SITE_ID, RCI_SEALED_PRIVATE_KEY } = process.env;
   if (!RCI_SITE_ID || !/^[a-zA-Z0-9.,-]+$/.test(RCI_SITE_ID)) throw new Error("Set RCI_SITE_ID");
   const token = await managedToken();
   const site = `/v1.0/sites/${RCI_SITE_ID}`;
@@ -125,7 +123,7 @@ async function run() {
   const [roster, answers, checkins, intake, content, participationRows, rsvpRows] = await Promise.all(
     ["Couples", "Prompt Answers", "Sunday Check-ins", "Pilot Intake", "Monthly Content", "Participation", "RSVPs"].map(read)
   );
-  const result = project(roster.map(item => ({ id: item.id, data: readRow("couples", item) })), answers, checkins, intake, content.map(parse), Date.now(), RCI_RELEASE_AT);
+  const result = project(roster.map(item => ({ id: item.id, data: readRow("couples", item) })), answers, checkins, intake, content.map(parse), Date.now());
   async function publish(name, existing, records) {
     const byTitle = new Map(existing.map(item => [item.fields?.Title, item]));
     for (const [Title, record] of records) {
@@ -148,10 +146,10 @@ async function run() {
     const old = parse(item);
     const pilotMonths = [...new Set([...(old.pilotMonths || []), ...journal.months])].sort();
     const releasedNotes = [...(old.releasedNotes || [])];
-    for (const [memberId, note] of journal.notes) {
-      if (releasedNotes.some(saved => saved.season === season && saved.memberId === memberId)) continue;
+    for (const note of journal.notes.values()) {
+      if (releasedNotes.some(saved => saved.month === note.month && saved.memberId === note.memberId)) continue;
       try {
-        releasedNotes.push({ season, memberId, author: note.author, text: decryptNote(note.data, RCI_SEALED_PRIVATE_KEY) });
+        releasedNotes.push({ season, month: note.month, memberId: note.memberId, author: note.author, text: decryptNote(note.data, RCI_SEALED_PRIVATE_KEY) });
       } catch { noteErrors++; }
     }
     if (JSON.stringify(old.pilotMonths || []) === JSON.stringify(pilotMonths) &&
@@ -160,7 +158,7 @@ async function run() {
     if (!item.eTag || AppData.length > 60000) throw new Error("Journal missing eTag or at capacity");
     await request(target + "/fields", "PATCH", { AppData }, item.eTag);
   }
-  console.log(`Processed ${result.participation.size} participation and ${result.rsvps.size} RSVP projections.`);
+  log(`Processed ${result.participation.size} participation and ${result.rsvps.size} RSVP projections.`);
   if (noteErrors) throw new Error(`${noteErrors} sealed notes could not be released`);
 }
 
@@ -169,4 +167,4 @@ if (require.main === module) run().catch(error => {
   console.error("Pilot sync failed:", error.message);
   process.exitCode = 1;
 });
-module.exports = { project, decryptNote };
+module.exports = { run, project, decryptNote };

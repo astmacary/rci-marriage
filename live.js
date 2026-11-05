@@ -157,7 +157,7 @@
         <button class="btn" type="submit">Save goal</button><p class="form-status" role="status"></p></form>`);
     }).join("");
     const released = Array.isArray(data.releasedNotes) ? data.releasedNotes : [];
-    const notes = released.map(note => `<article><h3>${esc(note.author)}</h3><p style="white-space:pre-wrap">${esc(note.text)}</p></article>`).join("");
+    const notes = released.map(note => `<article><h3>${esc(note.author)} · ${esc(note.month)}</h3><p style="white-space:pre-wrap">${esc(note.text)}</p></article>`).join("");
     return card("Our Orchard", `<p class="sub">A month fills in after either spouse answers a prompt or checks in.</p><ul>${orchard}</ul>`)
       + card("Union Goals", empty("Your three goals for 2027 are shared with your spouse.")) + goals
       + card("Released notes", notes || empty("Your notes will appear here after the ministry releases them."));
@@ -165,12 +165,14 @@
   function sealed() {
     const config = (state.rows.content || []).map(D.parse).find(row => row.kind === "sealed-release" && row.season === "2027");
     if (state.errors.content || state.errors.pilotIntake) return card("Sealed note", empty(state.errors.content || state.errors.pilotIntake));
-    const saved = own("pilotIntake").some(item => item.fields?.Title === "sealed:2027");
+    const month = day().slice(0, 7);
+    const releaseAt = D.monthlyRelease(month);
+    const saved = own("pilotIntake").some(item => item.fields?.Title === `sealed:${month}`);
     if (saved) return card("Sealed note", empty("Your note is sealed. Open Our Orchard to see it after release."));
     if (day() < "2027-01-29") return card("Sealed note", empty("Opens January 29, 2027."));
-    if (!config?.publicKey || !Number.isFinite(D.instant(config.releaseAt))) return card("Sealed note", empty("The ministry is preparing the release."));
-    if (Date.now() >= D.instant(config.releaseAt)) return card("Sealed note", empty("The submission window has closed."));
-    const release = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeStyle: "short", timeZone: "America/New_York" }).format(new Date(config.releaseAt));
+    if (!config?.publicKey || !Number.isFinite(releaseAt)) return card("Sealed note", empty("The ministry is preparing the release."));
+    if (Date.now() >= releaseAt) return card("Sealed note", empty("The submission window has closed."));
+    const release = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeStyle: "short", timeZone: "America/New_York" }).format(new Date(releaseAt));
     return card("Sealed note", `<p class="sub">Opens ${esc(release)} Eastern. Your note is encrypted when you seal it and can’t be reopened in the app before release.</p>
       <form data-form="sealed"><label for="sealed-note">A note to your spouse</label><textarea id="sealed-note" name="text" rows="5" required maxlength="2000"></textarea>
       <button class="btn" type="submit">Seal my note</button><p class="form-status" role="status"></p></form>`);
@@ -204,16 +206,18 @@
   }
   async function sealNote(text) {
     const config = (state.rows.content || []).map(D.parse).find(row => row.kind === "sealed-release" && row.season === "2027");
+    const month = day().slice(0, 7);
+    const releaseAt = D.monthlyRelease(month);
     if (!text || text.length > 2000 || !config?.publicKey || day() < "2027-01-29" ||
-      !(Date.now() < D.instant(config.releaseAt)) ||
-      own("pilotIntake").some(item => item.fields?.Title === "sealed:2027")) throw new Error("Sealing is unavailable");
+      !(Date.now() < releaseAt) ||
+      own("pilotIntake").some(item => item.fields?.Title === `sealed:${month}`)) throw new Error("Sealing is unavailable");
     const publicKey = await crypto.subtle.importKey("jwk", config.publicKey, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["wrapKey"]);
     const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt"]);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const bytes = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(text));
     const wrapped = await crypto.subtle.wrapKey("raw", key, publicKey, { name: "RSA-OAEP" });
     const encode = value => btoa(String.fromCharCode(...new Uint8Array(value)));
-    await save("pilotIntake", "sealed:2027", { version: 1, kind: "sealed-note", season: "2027",
+    await save("pilotIntake", `sealed:${month}`, { version: 1, kind: "sealed-note", season: "2027", month,
       iv: encode(iv), ciphertext: encode(bytes), wrappedKey: encode(wrapped) });
   }
   function leaders() {

@@ -23,15 +23,18 @@ test("weekly and orchard projections use server authorship and Eastern dates and
   assert.doesNotMatch(JSON.stringify([...result.participation.values()]), /Example private|Example check-in/);
 });
 
-test("release requires a matching trusted timestamp, an elapsed clock and a pre-release submission", () => {
-  const at = "2027-12-18T18:00:00Z";
-  const config = [{ kind: "sealed-release", season: "2027", releaseAt: at }];
-  const note = row("sealed-note", "2027-01-29T15:00:00Z", {}, "member-a", "sealed:2027");
-  const late = row("sealed-note", at, {}, "member-b", "sealed:2027");
-  const notes = (now, setting) => project([couple], [], [], [note, late], config, now, setting).journals.get("42")?.notes.size;
-  assert.equal(notes(Date.parse(at) - 1, at), 0);
-  assert.equal(notes(Date.parse(at), "2027-12-18T17:00:00Z"), 0);
-  assert.equal(notes(Date.parse(at), at), 1);
+test("month-end release uses Eastern time and keeps future months sealed", () => {
+  const { monthlyRelease } = require("../src/data.js");
+  assert.equal(new Date(monthlyRelease("2027-01")).toISOString(), "2027-02-01T04:59:00.000Z");
+  assert.equal(new Date(monthlyRelease("2027-02")).toISOString(), "2027-03-01T04:59:00.000Z");
+  assert.equal(new Date(monthlyRelease("2027-03")).toISOString(), "2027-04-01T03:59:00.000Z");
+  const note = row("sealed-note", "2027-01-29T15:00:00Z", { month: "2027-01" }, "member-a", "sealed:2027-01");
+  const feb = row("sealed-note", "2027-02-02T15:00:00Z", { month: "2027-02" }, "member-a", "sealed:2027-02");
+  const late = row("sealed-note", "2027-02-01T04:59:00Z", { month: "2027-01" }, "member-b", "sealed:2027-01");
+  const notes = now => project([couple], [], [], [note, late, feb], [], now).journals.get("42").notes.size;
+  assert.equal(notes(monthlyRelease("2027-01") - 1), 0);
+  assert.equal(notes(monthlyRelease("2027-01")), 1);
+  assert.equal(notes(monthlyRelease("2027-02")), 2);
 });
 
 test("the browser encryption envelope decrypts only with the release key", async () => {

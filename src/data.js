@@ -99,7 +99,16 @@
     const i = emails.indexOf(String(email || "").toLowerCase());
     return i === 1 ? "spouse2" : i === 0 ? "spouse1" : "";
   };
-  const api = { ministryDay, weekStart, goals, events, instant, shared, side, parse, own, escape, safeLink, validate, read, columns, toDate, fromDate };
+  const monthlyRelease = month => {
+    if (!/^2027-(0[1-9]|1[0-2])$/.test(month)) return NaN;
+    const [year, number] = month.split("-").map(Number);
+    const last = new Date(Date.UTC(year, number, 0, 12));
+    const offset = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", timeZoneName: "longOffset"
+    }).formatToParts(last).find(part => part.type === "timeZoneName").value.slice(3);
+    return Date.parse(last.toISOString().slice(0, 10) + "T23:59:00" + offset);
+  };
+  const api = { monthlyRelease, ministryDay, weekStart, goals, events, instant, shared, side, parse, own, escape, safeLink, validate, read, columns, toDate, fromDate };
   root.RCIData = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof window === "undefined" ? globalThis : window);
