@@ -74,6 +74,7 @@
         ? `<button class="btn" type="button" data-live="push-on" style="background:#B23A48;color:#fff;border-color:#B23A48">Enable notifications</button>` : button(...action)));
   }
   const siteUrl = `https://${C.siteHost}${C.sitePath}`;
+  const longDate = ymd => { const [y, m, d] = String(ymd).split("-").map(Number); return new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, d))); };
   const day = D.ministryDay;
   const oid = () => state.account?.idTokenClaims?.oid || state.account?.localAccountId;
   const own = key => D.own(state.rows[key] || [], oid());
@@ -90,11 +91,12 @@
   }
   async function graph(path, options = {}) {
     const url = new URL(path, "https://graph.microsoft.com/v1.0/");
-    if (url.origin !== "https://graph.microsoft.com" || !url.pathname.startsWith("/v1.0/sites/")) throw new Error("Unexpected data destination");
+    if (url.origin !== "https://graph.microsoft.com" || !(url.pathname.startsWith("/v1.0/sites/") || url.pathname === "/v1.0/me/photo/$value")) throw new Error("Unexpected data destination");
     const token = await auth.acquireTokenSilent({ scopes, account: state.account });
     const response = await fetch(url, { ...options, cache: "no-store", signal: controller.signal,
       headers: { Authorization: `Bearer ${token.accessToken}`, "Content-Type": "application/json", ...options.headers } });
     if (!response.ok) { const error = new Error("Microsoft request failed"); error.status = response.status; throw error; }
+    if (options.raw) return response;
     return response.status === 204 ? null : response.json();
   }
   async function pages(path) {
@@ -125,13 +127,18 @@
         : state.view === "journal" ? ["couples", "answers"]
         : state.view === "orchard" ? ["couples", "content", "pilotIntake"]
         : state.view === "branch" ? ["couples"]
-        : state.view === "grow" ? ["content"]
-        : ["gather", "sealed"].includes(state.view) ? ["content", "pilotIntake"] : ["content", "answers", "couples", "pilotIntake"];
+        : state.view === "grow" ? ["content", "couples"]
+        : ["gather", "sealed"].includes(state.view) ? ["content", "pilotIntake", "couples"] : ["content", "answers", "couples", "pilotIntake"];
       await Promise.all(needed.map(load));
       if (["today", "checkin", "journal", "orchard", "branch"].includes(state.view)) await loadJournal();
     } catch (error) { state.message = notice(error); }
     state.loading = false; render();
   }
+  // The signed-in spouse's side of the couple row, and the other spouse's details.
+  const mySide = () => D.side(profile(), state.account?.username) || "spouse1";
+  const spouseOf = () => { const c = profile(); if (!c) return null; const two = mySide() === "spouse2";
+    return { name: two ? c.spouse1Name : c.spouse2Name, photo: two ? c.photo1 : c.photo2 }; };
+  const spouseFirst = () => String(spouseOf()?.name || "").trim().split(/\s+/)[0] || "";
   function profile() {
     const email = (state.account?.username || "").toLowerCase();
     return (state.rows.couples || []).map(item => D.read("couples", item)).find(data => data.kind === "couple" && data.active !== false &&
@@ -190,7 +197,7 @@
   const label = (text, extra = "") => `<span class="label" style="color:var(--fig)${extra}">${text}</span>`;
   const panel = (lbl, body, extra = "") => `<section class="card"${extra}>${lbl ? label(lbl) : ""}${body}</section>`;
   const tile = (view, lbl, big, small) => `<button type="button" class="card" data-view="${view}" style="gap:4px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)"><span style="font-size:12px;font-weight:700;color:var(--fig)">${lbl}</span><span style="font-size:16px;font-weight:700">${big}</span><span class="sub" style="font-size:13px">${small}</span></button>`;
-  const TAB_OF = { calendar: "today", today: "today", checkin: "us", journal: "us", orchard: "us", grow: "grow", branch: "branch", gather: "gather" };
+  const TAB_OF = { calendar: "today", today: "today", checkin: "us", journal: "us", orchard: "us", grow: "us", profile: "", branch: "branch", gather: "gather" };
   const TAB_ICON = {
     today: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
     us: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="13" r="5"/><circle cx="15" cy="13" r="5"/></svg>',
@@ -201,11 +208,11 @@
   function tabBar() {
     const cur = TAB_OF[state.view];
     const item = (id, view, text) => `<button type="button" data-view="${view}" ${cur === id ? 'aria-current="page"' : ""} ${state.loading ? "disabled" : ""}>${TAB_ICON[id]}${text}</button>`;
-    return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Today")}${item("us","checkin","Check In")}${item("grow","grow","Grow")}${item("branch","branch","Branch")}${item("gather","gather","Gather")}</div></nav>`;
+    return `<nav class="tabs" aria-label="Main"><div style="grid-template-columns:repeat(4,minmax(0,1fr))">${item("today","today","Today")}${item("us","checkin","Check In")}${item("branch","branch","Branch")}${item("gather","gather","Gather")}</div></nav>`;
   }
   function usSeg(cur) {
     const a = (view, text) => `<button type="button" data-view="${view}" ${cur === view ? 'aria-current="page"' : ""}>${text}</button>`;
-    return `<div class="seg seg3">${a("checkin","Check-in")}${a("orchard","Our Orchard")}${a("journal","Journal")}</div>`;
+    return `<div class="seg seg4">${a("grow","Grow")}${a("checkin","Check-in")}${a("orchard","Our Orchard")}${a("journal","Journal")}</div>`;
   }
   function header() {
     const v = state.view, f = FRUIT[parts().m - 1];
@@ -213,12 +220,13 @@
     if (!state.account) return H("Fruit of Our Union · 2027", "Welcome");
     if (v === "today") { const n = firstName(); return H(`${fmt({ weekday: "long", month: "long", day: "numeric" })} · Week ${weekIndex() + 1} of 4`, `Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}${n ? ", " + n : ""}`); }
     if (v === "calendar") { const p = Object.values(monthPrompts()), c = p.filter(x => x.type === "Check-in").length; return H(`${f[2]} · ${p.length - c} prompts · ${c} check-ins`, `${f[0]} · ${f[1]}`); }
-    if (v === "checkin") return H("Shared with your spouse", "Sunday check-in", usSeg("checkin"));
+    if (v === "checkin") return H(`Shared with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}`, "Sunday check-in", usSeg("checkin"));
     if (v === "orchard") return H("Fills in month by month. Revealed in full at the Harvest Celebration.", "Our Orchard", usSeg("orchard"));
     if (v === "journal") return H("Visible to both of you", "Our journal", usSeg("journal"));
-    if (v === "grow") return H(`${f[0]} · ${f[2]}`, `${f[1]}, week by week`);
+    if (v === "grow") return H(`${f[0]} · ${f[2]}`, `${f[1]}, week by week`, usSeg("grow"));
     if (v === "branch") return H("Your Branch", esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
     if (v === "gather") return H("RCI Marriage Ministry · 2027", "Gather");
+    if (v === "profile") return H("Your profile and couple details", "Profile");
     if (v === "leaders") return H("Leader dashboard", "How the ministry is growing");
     return H("", "RCI Marriage");
   }
@@ -320,7 +328,7 @@
       ? `<div><span style="background:var(--navy);color:var(--cream);border:2px solid var(--brand-gold)">${esc(initials(c))}</span>You</div>`
       : `<div><span>${esc(initials(c))}</span>${esc(names(c))}</div>`).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned."), "");
     return roster + panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div><p class="sub">Your Branch is 4–5 couples with a mentor couple. You meet in Grow week (week 3) to share and pray together.</p>`)
-      + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc(couple?.mentor || "To be announced")}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p><button class="btn" type="button" data-view="checkin">Open the Sunday check-in</button>`);
+      + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc(couple?.mentor || "To be announced")}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p>${state.mentorSent ? `<p class="sub" style="font-weight:600;color:var(--fig)">Request sent. Your mentor couple will reach out.</p>` : `<button class="btn" type="button" data-live="mentor-request">We’d like our mentor couple to reach out</button>`}`);
   }
   function checkin() {
     return `<form data-form="checkin" style="display:flex;flex-direction:column;gap:12px">
@@ -356,7 +364,7 @@
     }).join("")}</div><p class="sub" style="font-size:13px">A month fills in after either of you answers a prompt or checks in.</p></section>`;
     const goals = D.goals.map(goal => {
       const saved = data.unionGoals?.[goal.key] || "";
-      if (day() < goal.date) return card(goal.label, empty("Opens " + goal.date));
+      if (day() < goal.date) return card(goal.label, empty("Opens " + longDate(goal.date) + "."));
       return card(goal.label, `<form data-form="goal"><input type="hidden" name="goal" value="${goal.key}">
         <label for="goal-${goal.key}">Our ${goal.label.toLowerCase()} goal</label>
         <textarea id="goal-${goal.key}" name="text" required maxlength="2000" rows="4">${esc(saved)}</textarea>
@@ -383,26 +391,128 @@
       <form data-form="sealed"><label for="sealed-note">A note to your spouse</label><textarea id="sealed-note" name="text" rows="5" required maxlength="2000"></textarea>
       <button class="btn" type="submit">Seal my note</button><p class="form-status" role="status"></p></form>`);
   }
+  // Gatherings calendar, laid out like the Security app's calendar: tap a day to see details and RSVP.
+  function gatherings() {
+    return (state.rows.content || []).map(item => D.read("content", item)).filter(row => row.kind === "gathering" && /^\d{4}-\d{2}-\d{2}$/.test(String(row.date || "")))
+      .map(row => ({ ...row, end: /^\d{4}-\d{2}-\d{2}$/.test(String(row.end || "")) && row.end > row.date ? row.end : row.date })).sort((a, b) => a.date.localeCompare(b.date));
+  }
+  const ymdAdd = (ymd, n) => { const [y, m, d] = ymd.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+  function rsvpForm(event) {
+    const details = (state.rows.content || []).map(D.parse).find(row => row.kind === "event" && row.event === event && row.season === "2027");
+    if (!details) return empty("RSVPs open closer to the date.");
+    const saved = own("pilotIntake").find(item => item.fields?.Title === "rsvp:2027:" + event);
+    const selection = saved ? D.parse(saved).response : "";
+    return `<form data-form="rsvp"><input type="hidden" name="event" value="${event}">
+      <fieldset style="border:0;margin:0;padding:0"><legend class="sub" style="padding:0;margin-bottom:6px">Your RSVP${selection ? ` · saved: ${selection === "yes" ? "We’re going" : "Can’t make it"}` : ""}</legend><div class="grid2">${[["yes","We’re going"],["no","Can’t make it"]].map(([value,text]) =>
+        `<label class="tog-check"><input type="radio" name="response" value="${value}" required ${selection === value ? "checked" : ""}><span>${text}</span></label>`).join("")}</div></fieldset><button class="btn" type="submit" style="margin-top:10px">Save RSVP</button><p class="form-status sub" role="status"></p></form>`;
+  }
   function gather() {
     if (state.errors.content || state.errors.pilotIntake) return card("Gather", empty(state.errors.content || state.errors.pilotIntake));
-    const content = (state.rows.content || []).map(D.parse);
-    const dates = (state.rows.content || []).map(item => D.read("content", item)).filter(row => row.kind === "gathering" && String(row.date || "").startsWith("2027-"))
-      .sort((a, b) => a.date.localeCompare(b.date));
-    const schedule = panel("2027 gatherings", (dates.length ? `<div style="display:flex;flex-direction:column;gap:10px">${dates.map(row =>
-        `<div style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:10px"><span style="font-weight:700">${esc(row.when || row.date)}</span><span class="sub" style="text-align:right">${esc(row.text)}</span></div>`).join("")}</div>`
-      : empty("Dates will appear here when the ministry publishes them."))
-      + `<p class="sub" style="font-size:13px;font-style:italic;margin:0">These are projected dates, pending the church calendar.</p>`);
-    return schedule + D.events.map(event => {
-      const title = event === "retreat" ? "Marriage Retreat" : "Harvest Celebration";
-      const details = content.find(row => row.kind === "event" && row.event === event && row.season === "2027");
-      if (!details) return card(title, empty("Details and RSVPs will open when the ministry publishes this event."));
-      const saved = own("pilotIntake").find(item => item.fields?.Title === "rsvp:2027:" + event);
-      const selection = saved ? D.parse(saved).response : "";
-      return panel(event === "retreat" ? "Marriage Retreat 2027" : "December · Year-end", `<div style="font-size:17px;font-weight:700">${title}</div><p class="sub" style="white-space:pre-wrap">${esc(details.text)}</p>
-        <form data-form="rsvp"><input type="hidden" name="event" value="${event}">
-        <fieldset style="border:0;margin:0;padding:0"><legend class="sub" style="padding:0;margin-bottom:6px">Your RSVP</legend><div class="grid2">${[["yes","We’re going"],["no","Can’t make it"]].map(([value,text]) =>
-            `<label class="tog-check"><input type="radio" name="response" value="${value}" required ${selection === value ? "checked" : ""}><span>${text}</span></label>`).join("")}</div></fieldset><button class="btn" type="submit" style="margin-top:10px">Save RSVP</button><p class="form-status sub" role="status"></p></form>`);
-    }).join("");
+    const list = gatherings(), t = day();
+    const on = ymd => list.filter(g => g.date <= ymd && ymd <= g.end);
+    if (!state.gcal) { const next = list.find(g => g.end >= t) || list[0]; const sel = next ? next.date : t; state.gcal = { month: sel.slice(0, 7), sel }; }
+    const { month, sel } = state.gcal, [y, m] = month.split("-").map(Number);
+    const lead = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const start = ymdAdd(`${month}-01`, -lead), weeks = Math.ceil((lead + dim) / 7);
+    let cells = "";
+    for (let n = 0; n < weeks * 7; n++) {
+      const k = ymdAdd(start, n), ev = on(k);
+      cells += `<button type="button" class="dcell${k.slice(0, 7) !== month ? " out" : ""}${k === t ? " today" : ""}${k === sel ? " sel" : ""}" data-gday="${k}" aria-label="${esc(longDate(k))}${ev.length ? ", " + esc(ev.map(g => g.text).join(", ")) : ""}"><span>${Number(k.slice(8))}</span><span class="dots">${ev.length ? "<i></i>" : ""}</span></button>`;
+    }
+    const title = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, 1)));
+    const today = on(sel);
+    const detail = today.length ? today.map(g => `<section class="card"><span class="label" style="color:var(--fig)">${esc(g.when || longDate(g.date))}</span>
+        <div style="font-size:17px;font-weight:700">${esc(g.text)}</div>
+        ${g.details ? `<p class="sub" style="white-space:pre-wrap">${esc(g.details)}</p>` : `<p class="sub">Time and place to be announced.</p>`}
+        ${D.events.includes(g.event) ? rsvpForm(g.event) : `<p class="sub" style="font-size:13px">RSVPs open closer to the date.</p>`}</section>`).join("")
+      : `<section class="card">${empty("No gathering on this day. Days with a dot have a gathering.")}</section>`;
+    const upcoming = list.map(g => `<button type="button" class="card" data-gday="${g.date}" style="flex-direction:row;justify-content:space-between;align-items:center;cursor:pointer;font:inherit;color:var(--ink);text-align:left;padding:12px 16px"><span style="font-weight:700">${esc(g.text)}</span><span class="sub">${esc(g.when || longDate(g.date))}</span></button>`).join("");
+    return `<section class="card cal-panel"><div class="cal-head"><h2>${esc(title)}</h2>
+        <button type="button" class="btn ghost" data-gcal="today" style="padding:6px 10px;min-height:0">Today</button>
+        <button type="button" class="iconbtn" data-gcal="prev" aria-label="Previous month">‹</button><button type="button" class="iconbtn" data-gcal="next" aria-label="Next month">›</button></div>
+        <div class="grid7">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(x => `<div class="dowh">${x}</div>`).join("")}${cells}</div></section>
+      <h2 class="label" style="margin:4px 0 0;color:var(--muted)">${esc(longDate(sel))}</h2>${detail}
+      ${list.length ? `<h2 class="label" style="margin:4px 0 0;color:var(--muted)">2027 gatherings</h2>${upcoming}` : ""}
+      <p class="sub" style="font-size:13px;font-style:italic;margin:0">These are projected dates, pending the church calendar.</p>`;
+  }
+  // Profile: photos and preferences, saved to the couple's row in the Couples list.
+  const photos = new Map();
+  function photoUrl(raw) {
+    const path = D.assetPath(raw, C.sitePath);
+    const key = path || (raw === "me" ? "me" : "");
+    if (!key) return Promise.resolve(null);
+    if (!photos.has(key)) photos.set(key, (async () => {
+      try {
+        const res = key === "me" ? await graph("me/photo/$value", { raw: true })
+          : await graph(`sites/${state.site.id}/lists/${encodeURIComponent("Site Assets")}/drive/root:/${path.split("/").map(encodeURIComponent).join("/")}:/content`, { raw: true });
+        return URL.createObjectURL(await res.blob());
+      } catch { return null; }
+    })());
+    return photos.get(key);
+  }
+  function hydratePhotos() {
+    document.querySelectorAll("img[data-photo]").forEach(img => {
+      const chain = img.dataset.photo.split("|").filter(Boolean);
+      (async () => { for (const raw of chain) { const url = await photoUrl(raw); if (url) { img.src = url; img.hidden = false; img.nextElementSibling?.setAttribute("hidden", ""); return; } } })();
+    });
+  }
+  const initialsOf = name => String(name || "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?";
+  const face = (raws, name, size) => `<span class="face" style="width:${size}px;height:${size}px;font-size:${Math.round(size / 2.8)}px"><img alt="" data-photo="${esc(raws)}" hidden><b>${esc(initialsOf(name))}</b></span>`;
+  function myPhotoChain() { const c = profile(); return [c ? (mySide() === "spouse2" ? c.photo2 : c.photo1) : "", "me"].filter(Boolean).join("|"); }
+  function myName() { const c = profile(); return (c ? (mySide() === "spouse2" ? c.spouse2Name : c.spouse1Name) : "") || state.account?.name || ""; }
+  function profileView() {
+    const c = profile();
+    if (state.errors.couples) return card("Profile", empty(state.errors.couples));
+    if (!c) return card("Profile", empty("Your couple profile hasn’t been set up yet. Ask a ministry administrator to add you to the Couples list."));
+    const sp = spouseOf(), mine = mySide() === "spouse2" ? "Spouse2Photo" : "Spouse1Photo";
+    const choice = (name, value, opts) => `<div class="grid2">${opts.map(o => `<label class="tog-check"><input type="radio" name="${name}" value="${o}" ${value === o ? "checked" : ""}><span>${o}</span></label>`).join("")}</div>`;
+    return `<section class="card" style="align-items:center;text-align:center;gap:10px">${face(myPhotoChain(), myName(), 112)}
+        <div style="font-size:22px;font-weight:700">${esc(myName())}</div><span class="sub">${esc(state.account?.username || "")}</span>
+        <label class="btn" for="pf-photo" style="cursor:pointer">Change Photo</label><input id="pf-photo" type="file" accept="image/*" data-field="${mine}" hidden></section>
+      <section class="card">${label("Your spouse")}<div style="display:flex;align-items:center;gap:12px">${face(sp?.photo || "", sp?.name, 56)}<div style="font-size:17px;font-weight:700">${esc(sp?.name || "Not added yet")}</div></div></section>
+      <section class="card" style="gap:10px">${label("Couples photo")}
+        ${c.couplePhoto ? `<img alt="Your couples photo" data-photo="${esc(c.couplePhoto)}" hidden style="width:100%;border-radius:12px;object-fit:cover;max-height:320px"><p class="sub">Loading photo…</p>` : empty("No couples photo yet.")}
+        <label class="btn ghost" for="pf-couple" style="cursor:pointer;align-self:flex-start">${c.couplePhoto ? "Change couples photo" : "Add couples photo"}</label><input id="pf-couple" type="file" accept="image/*" data-field="CouplePhoto" hidden></section>
+      <form data-form="profile" class="card" style="gap:12px">${label("About us")}
+        <label for="pf-anniv">Anniversary date</label><input id="pf-anniv" type="date" name="anniversary" value="${esc(c.anniversary || "")}">
+        <fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="padding:0;margin-bottom:6px;font-weight:600">Preferred contact method</legend>${choice("contact", c.contact, ["Text", "Call", "Email"])}</fieldset>
+        <fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="padding:0;margin-bottom:6px;font-weight:600">Preferred gathering</legend>${choice("gathering", c.gathering, ["In person", "Virtual"])}</fieldset>
+        <button class="btn" type="submit">Save</button><p class="form-status sub" role="status" style="margin:0"></p></form>
+      <button class="btn ghost" type="button" data-live="signout">Sign out</button>`;
+  }
+  async function resizeImage(file, max = 800) {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+    const k = Math.min(1, max / Math.max(img.width, img.height));
+    const cv = document.createElement("canvas"); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+    return new Promise(r => cv.toBlob(r, "image/jpeg", 0.86));
+  }
+  async function updateCouple(fields) {
+    const c = profile(); if (!c?.itemId) throw new Error("No couple profile");
+    await graph(`${base("couples")}/items/${encodeURIComponent(c.itemId)}/fields`, { method: "PATCH", body: JSON.stringify(fields) });
+    await load("couples");
+  }
+  async function uploadPhoto(field, file) {
+    const c = profile(); if (!c?.itemId || !["Spouse1Photo", "Spouse2Photo", "CouplePhoto"].includes(field)) throw new Error("Invalid photo");
+    if (field !== "CouplePhoto" && field !== (mySide() === "spouse2" ? "Spouse2Photo" : "Spouse1Photo")) throw new Error("Invalid photo");
+    const blob = await resizeImage(file, field === "CouplePhoto" ? 1400 : 800);
+    const fileName = `couple_${c.itemId}_${field}_${Date.now()}.jpg`;
+    const up = await graph(`sites/${state.site.id}/lists/${encodeURIComponent("Site Assets")}/drive/root:/Lists/${encodeURIComponent(state.lists.couples)}/${fileName}:/content`,
+      { method: "PUT", headers: { "Content-Type": "image/jpeg" }, body: blob });
+    const u = new URL(up.webUrl);
+    await updateCouple({ [field]: JSON.stringify({ type: "thumbnail", fileName, serverUrl: u.origin, serverRelativeUrl: decodeURIComponent(u.pathname) }) });
+  }
+  // Signed-in photo next to the light/dark button; opens the profile.
+  function headerPhoto() {
+    const bar = document.querySelector("#brandbar > div"); if (!bar) return;
+    let slot = document.getElementById("me-slot");
+    const toggle = document.getElementById("theme-toggle");
+    if (!slot && toggle) { slot = document.createElement("span"); slot.id = "me-slot"; slot.style.cssText = "display:flex;align-items:center;gap:8px"; toggle.replaceWith(slot); slot.append(toggle); }
+    if (!slot) return;
+    slot.querySelector(".me-btn")?.remove();
+    if (!state.account) return;
+    const btn = document.createElement("button"); btn.type = "button"; btn.className = "me-btn"; btn.dataset.view = "profile"; btn.setAttribute("aria-label", "My profile");
+    btn.innerHTML = face(myPhotoChain(), myName(), 44); slot.append(btn);
   }
   async function updateJournal(changes) {
     const item = state.journal;
@@ -460,14 +570,23 @@
     const account = state.account, wide = state.view === "leaders" && !!account;
     root.className = "app" + (wide ? " wide" : "");
     const bar = document.getElementById("brandbar"); if (bar && bar !== root) bar.className = "brandbar" + (wide ? " wide" : "");
-    const views = { calendar, today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
+    const views = { profile: profileView, calendar, today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
     root.innerHTML = header() + accountStrip() + `<main>
       ${!account ? card("Sign in", `<p class="sub">Sign in with your church Microsoft account to open your ministry data. The sign-in screen uses the shared RCI Productions registration.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}<a href="?demo=1">Explore the sample demo</a>`) :
         `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.site && !state.loading && state.view === "today" ? notifications() : ""}${state.loading ? "" : !state.site ? empty("The connection is not ready. Refresh to retry.") : (views[state.view] || today)()}`}
       </main>${account && !wide ? tabBar() : ""}`;
+    if (typeof document.querySelector === "function") { headerPhoto(); hydratePhotos(); }
   }
   window.renderLive = render;
   document.addEventListener("click", async event => {
+    const gday = event.target.closest("[data-gday]");
+    if (gday) { state.gcal = { month: gday.dataset.gday.slice(0, 7), sel: gday.dataset.gday }; render(); return; }
+    const gnav = event.target.closest("[data-gcal]");
+    if (gnav && state.gcal) {
+      const [y, m] = state.gcal.month.split("-").map(Number), t = day();
+      const to = gnav.dataset.gcal === "today" ? t.slice(0, 7) : new Date(Date.UTC(y, m - 1 + (gnav.dataset.gcal === "next" ? 1 : -1), 1)).toISOString().slice(0, 7);
+      state.gcal = { month: to, sel: gnav.dataset.gcal === "today" ? t : to + "-01" }; render(); return;
+    }
     const calDay = event.target.closest("[data-cal]");
     if (calDay) { state.calDay = Number(calDay.dataset.cal); render(); return; }
     const view = event.target.closest("[data-view]");
@@ -478,6 +597,12 @@
       if (target.dataset.live === "refresh" && !state.loading) await loadView();
       if (target.dataset.live === "push-check") await checkPush();
       if (target.dataset.live === "push-on") await changePush(true);
+      if (target.dataset.live === "mentor-request") {
+        const c = profile(); if (!c) throw new Error("No couple profile");
+        target.disabled = true;
+        await graph(`${base("mentorRequests")}/items`, { method: "POST", body: JSON.stringify({ fields: { Title: "Mentor request", CoupleKey: String(c.coupleKey || ""), Branch: String(c.branch || ""), Status: "New" } }) });
+        state.mentorSent = true; render();
+      }
       if (target.dataset.live === "push-off") await changePush(false);
       if (target.dataset.live === "signout") {
         if (push.busy) return;
@@ -493,6 +618,13 @@
     state.week = D.weekStart(event.target.value);
     render();
   });
+  document.addEventListener("change", async event => {
+    const input = event.target; if (!["pf-photo", "pf-couple"].includes(input.id) || !input.files?.[0]) return;
+    state.message = "Uploading photo…"; render();
+    try { await uploadPhoto(input.dataset.field, input.files[0]); photos.clear(); state.message = "Photo updated."; }
+    catch (error) { state.message = "Couldn’t update the photo. " + notice(error); }
+    render();
+  });
   document.addEventListener("submit", async event => {
     const form = event.target.closest("[data-form]"); if (!form) return;
     event.preventDefault(); const submit = form.querySelector('[type="submit"]');
@@ -502,6 +634,12 @@
     try {
       if (form.dataset.form === "answer") await save("answers", `prompt:${values.get("promptId")}:${day()}`, { version: 1, kind: "prompt-answer", promptId: values.get("promptId"), date: day(), answer: values.get("answer") });
       if (form.dataset.form === "checkin") await save("checkins", `check-in:${day()}`, { version: 1, kind: "check-in", date: day(), ratings: [0,1,2,3].map(i=>Number(values.get(`rating${i}`))), need: values.get("need"), saw: values.get("saw"), mentor: values.get("mentor") === "yes" });
+      if (form.dataset.form === "profile") {
+        const anniv = String(values.get("anniversary") || ""), contact = String(values.get("contact") || ""), gathering = String(values.get("gathering") || "");
+        if (anniv && !/^\d{4}-\d{2}-\d{2}$/.test(anniv)) throw new Error("Invalid date");
+        await updateCouple({ AnniversaryDate: anniv ? D.toDate(anniv) : null,
+          PreferredContact: ["Text", "Call", "Email"].includes(contact) ? contact : null, PreferredGathering: ["In person", "Virtual"].includes(gathering) ? gathering : null });
+      }
       if (form.dataset.form === "goal") {
         const goal = D.goals.find(item => item.key === values.get("goal"));
         const text = String(values.get("text") || "").trim();

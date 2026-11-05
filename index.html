@@ -117,6 +117,26 @@ button.card{border:1px solid var(--line);width:100%}
 .seg button{min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px;border:0;background:transparent;color:var(--cream);font-size:14px;font-weight:600;cursor:pointer}
 .seg button[aria-current]{background:var(--brand-gold);color:var(--navy);font-weight:700}
 .seg.seg3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seg.seg4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.seg.seg4 button{font-size:13px;padding:0 2px}
+/* profile photos */
+.face{position:relative;flex-shrink:0;border-radius:999px;overflow:hidden;background:var(--soft);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+.face img{width:100%;height:100%;object-fit:cover;display:block}
+.me-btn{padding:0;border:2px solid var(--brand-gold);border-radius:999px;background:transparent;cursor:pointer;display:flex;width:48px;height:48px;align-items:center;justify-content:center}
+/* gatherings calendar (same layout as RCI Security) */
+.cal-panel{gap:8px;padding:12px}
+.cal-head{display:flex;align-items:center;gap:6px}
+.cal-head h2{font-family:var(--display);font-size:20px;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{width:40px;height:40px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dowh{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center;padding:2px 0}
+.dcell{height:44px;border:none;background:transparent;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font:inherit;font-size:14.5px;font-weight:500;color:var(--ink);padding:0;cursor:pointer}
+.dcell.out{opacity:.4}
+.dcell.today{box-shadow:inset 0 0 0 1.5px var(--fig)}
+.dcell.sel{background:var(--brand-gold);color:var(--navy);font-weight:700}
+.dcell .dots{display:flex;height:8px;align-items:center}
+.dcell .dots i{width:7px;height:7px;border-radius:50%;background:var(--fig)}
+.dcell.sel .dots i{background:var(--navy)}
 nav.tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted);background:none;border:0;cursor:pointer}
 nav.tabs button[aria-current]{color:var(--fig);font-weight:700}
 .rate{position:relative;display:block}
@@ -182,7 +202,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "10";
+const APP_VERSION = "11";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -570,7 +590,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=7" defer></script>
-<script src="live.js?v=7" defer></script>
+<script src="src/data.js?v=8" defer></script>
+<script src="live.js?v=8" defer></script>
 </body>
 </html>

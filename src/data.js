@@ -43,6 +43,18 @@
   const toDate = day => day ? `${day}T12:00:00Z` : null;
   const fromDate = value => value ? String(value).slice(0, 10) : "";
   const str = v => v == null ? "" : String(v);
+  // Image columns arrive as a JSON string (or object) holding the file's server-relative URL.
+  const photoRaw = v => !v ? "" : typeof v === "string" ? v : JSON.stringify(v);
+  // Path of an uploaded image inside the site's Site Assets library, from its image-column value.
+  const assetPath = (raw, sitePath) => {
+    try {
+      const url = String(JSON.parse(raw).serverRelativeUrl || "");
+      const root = `${sitePath}/SiteAssets/`;
+      if (!url.toLowerCase().startsWith(root.toLowerCase())) return "";
+      const rest = url.slice(root.length);
+      return rest.split("/").every(part => part && part !== ".." && part !== ".") ? rest : "";
+    } catch { return ""; }
+  };
   // Read a row from its named columns, falling back to the older AppData JSON.
   const read = (key, item) => {
     const f = item?.fields || {}, old = parse(item);
@@ -60,7 +72,9 @@
         coupleKey: f.CoupleKey || old.coupleKey || str(item?.id),
         journalItemId: f.JournalItemId || old.journalItemId,
         spouse1Name: f.Spouse1Name || old.members?.[0]?.name || "", spouse2Name: f.Spouse2Name || old.members?.[1]?.name || "",
-        anniversary: f.AnniversaryDate ? fromDate(f.AnniversaryDate) : old.anniversary };
+        anniversary: f.AnniversaryDate ? fromDate(f.AnniversaryDate) : (old.anniversary || ""),
+        itemId: str(item?.id), photo1: photoRaw(f.Spouse1Photo), photo2: photoRaw(f.Spouse2Photo), couplePhoto: photoRaw(f.CouplePhoto),
+        contact: f.PreferredContact || "", gathering: f.PreferredGathering || "" };
     }
     if (key === "answers") return { ...old,
       kind: old.kind || (f.PromptDate ? "prompt-answer" : undefined),
@@ -110,7 +124,7 @@
     }).formatToParts(last).find(part => part.type === "timeZoneName").value.slice(3);
     return Date.parse(last.toISOString().slice(0, 10) + "T23:59:00" + offset);
   };
-  const api = { monthlyRelease, ministryDay, weekStart, goals, events, instant, shared, side, parse, own, escape, safeLink, validate, read, columns, toDate, fromDate };
+  const api = { photoRaw, assetPath, monthlyRelease, ministryDay, weekStart, goals, events, instant, shared, side, parse, own, escape, safeLink, validate, read, columns, toDate, fromDate };
   root.RCIData = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof window === "undefined" ? globalThis : window);
