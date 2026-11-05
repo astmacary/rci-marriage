@@ -300,16 +300,30 @@
     if (state.errors.content) return panel("Grow", empty(state.errors.content));
     const content = (state.rows.content || []).map(item => ({ item, data: D.read("content", item) }));
     const order = ["video", "devotional", "challenge"];
-    const items = content.filter(({data}) => order.includes(data.kind)).sort((a, b) => order.indexOf(a.data.kind) - order.indexOf(b.data.kind));
-    const w = weekIndex();
+    const schedule = content.map(({data}) => data)
+      .filter(data => data.kind === "monthly-focus" && /^\d{4}-(0[1-9]|1[0-2])$/.test(data.month))
+      .sort((a, b) => a.month.localeCompare(b.month));
+    const currentMonth = day().slice(0, 7);
+    const selected = schedule.find(data => data.month === state.growMonth)
+      || schedule.find(data => data.month === currentMonth) || schedule[0];
+    const items = content.filter(({data}) => order.includes(data.kind) &&
+      (!selected || (data.kind !== "challenge" && (!data.date || data.date.startsWith(selected.month + "-")))))
+      .sort((a, b) => order.indexOf(a.data.kind) - order.indexOf(b.data.kind));
+    const w = !selected || selected.month === currentMonth ? weekIndex() : -1;
+    const monthLabel = month => new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" })
+      .format(new Date(month + "-01T00:00:00Z"));
     const kindLabel = { video: "Plant · Leader video", devotional: "Plant · Devotional", challenge: "Water · Couple challenge" };
     const weekOf = { video: 0, devotional: 0, challenge: 1 };
     const now = i => i === w ? ' style="position:relative;border:2px solid var(--brand-gold)"' : "";
     const tag = i => i === w ? `<span class="pill" style="position:absolute;top:10px;right:10px;background:var(--brand-gold);color:var(--navy);font-weight:700">This week</span>` : "";
-    return (items.map(({item, data}) => `<section class="card"${now(weekOf[data.kind])}>${tag(weekOf[data.kind])}${label(kindLabel[data.kind])}
+    const focus = selected ? panel("Monthly focus", `<label for="grow-month" class="sub">Month</label>
+      <select id="grow-month">${schedule.map(data => `<option value="${esc(data.month)}"${data === selected ? " selected" : ""}>${esc(monthLabel(data.month))}</option>`).join("")}</select>
+      <h2>${esc(selected.focus)}</h2><p class="sub">Anchor verse · ${esc(selected.verse)}</p>`) : "";
+    return focus + (items.map(({item, data}) => `<section class="card"${now(weekOf[data.kind])}>${tag(weekOf[data.kind])}${label(kindLabel[data.kind])}
         ${data.kind === "video" ? `<div style="display:flex;gap:12px;align-items:center"><div class="video"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#C4955F"><path d="M8 5v14l11-7z"/></svg></div><div style="font-weight:700">${esc(item.fields.Title)}</div></div>` : `<div style="font-size:16px;font-weight:700">${esc(item.fields.Title)}</div>`}
         <p class="sub" style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer" style="font-weight:700">Open ${data.kind === "video" ? "video" : "resource"} ›</a>` : ""}</section>`).join("")
       || panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0)))
+      + (selected ? panel("Week 2 · Water", `${tag(1)}<div style="font-size:16px;font-weight:700">Interactive for couples</div>${empty(selected.water)}`, now(1)) : "")
       + panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with your Branch</div><button type="button" data-view="branch" class="linkbtn">Open your Branch ›</button>`, now(2))
       + panel("Week 4 · Harvest", `${tag(3)}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="orchard" class="linkbtn">See Our Orchard ›</button>`, now(3));
   }
@@ -709,6 +723,11 @@
     } catch (error) { state.message = notice(error); render(); }
   });
   document.addEventListener("change", event => {
+    if (event.target.id === "grow-month") {
+      state.growMonth = event.target.value;
+      render();
+      return;
+    }
     if (event.target.id !== "leader-week" || !/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) return;
     state.week = D.weekStart(event.target.value);
     render();
