@@ -229,7 +229,7 @@
     if (v === "journal") return T("Our journal", "Visible to both of you", usSeg("journal"));
     if (v === "grow") return T(`${f[1]}, week by week`, `${f[0]} · ${f[2]}`, usSeg("grow"));
     if (v === "branch") return T(esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
-    if (v === "couple") return T("Branch couple", "", `<button type="button" class="linkbtn" data-view="branch" style="color:var(--cream);min-height:32px">‹ Back to Branch</button>`);
+    if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
     if (v === "gather") return T("Gatherings &amp; Special Dates");
     if (v === "profile") return T("My Profile");
     if (v === "leaders") return T("How the ministry is growing", "Leader dashboard", `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
@@ -477,8 +477,9 @@
   function myName() { const c = profile(); return (c ? (mySide() === "spouse2" ? c.spouse2Name : c.spouse1Name) : "") || state.account?.name || ""; }
   function coupleView() {
     const c = (state.rows.couples || []).map(item => D.read("couples", item)).find(x => x.itemId === state.coupleId);
-    if (!c) return card("Couple", empty("This couple isn’t available."));
-    return `<section class="card profile-card">
+    const back = `<button type="button" class="linkbtn" data-view="branch" style="min-height:32px">‹ Back to Branch</button>`;
+    if (!c) return back + card("Couple", empty("This couple isn’t available."));
+    return back + `<section class="card profile-card">
         <div class="cover-wrap">${c.couplePhoto ? `<img alt="Couples photo" data-photo="${esc(c.couplePhoto)}" hidden class="cover"><div class="cover cover-empty">Loading photo…</div>` : `<div class="cover cover-empty">No couples photo yet</div>`}</div>
         <div class="pair">
           <div class="person">${face(c.photo1, c.spouse1Name, 92)}<b>${esc(c.spouse1Name || "—")}</b></div>
