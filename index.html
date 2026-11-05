@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RCI Marriage</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#F3F5EF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RCI Marriage">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Fruit of Our Union: the RCI Marriage Ministry app for 2027.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Orchard palette: pale sage ground, forest ink, leaf green, fig, harvest gold. Mobile-first, one column; leader view widens. */
+:root{
+  --bg:#F3F5EF; --surface:#FFFFFF; --ink:#1E2A22; --muted:#56635A; --line:#DCE3D8; --soft:#E3E9DF;
+  --leaf:#2F5D3F; --leaf-soft:#E3ECE2; --fig:#7B2D52; --fig-soft:#F6E9EF; --gold:#8A5D00; --gold-soft:#FDF1D8;
+  --display:'Bricolage Grotesque',system-ui,sans-serif; --body:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-text-size-adjust:100%}
+body{min-height:100vh;min-height:100dvh}
+a{color:var(--leaf)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--fig);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance}
+.app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.app.wide{max-width:1280px}
+.demo{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 16px 0;padding:8px 12px;border-radius:12px;background:var(--gold-soft);color:#6B4800;font-size:13px;font-weight:600}
+.demo button{border:1px solid #C9A65A;background:transparent;border-radius:999px;padding:6px 12px;min-height:36px;cursor:pointer;font-weight:700;color:#6B4800}
+.head{padding:20px 20px 6px;display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:13px;font-weight:600;color:var(--muted)}
+.head h1{margin:0;font-weight:700;font-size:28px;line-height:1.15}
+.back{align-self:flex-start;display:flex;align-items:center;min-height:44px;font-size:15px;font-weight:600;text-decoration:none}
+main{flex:1;padding:10px 20px 110px;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 2px rgba(30,42,34,.08)}
+a.card{text-decoration:none;color:var(--ink)}
+.label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sub{font-size:14px;line-height:1.45;color:var(--muted);margin:0}
+.big{font-size:17px;font-weight:600;line-height:1.35}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;white-space:nowrap}
+.btn{min-height:46px;border:0;border-radius:12px;background:var(--leaf);color:#fff;font-weight:600;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;padding:0 16px}
+.btn.fig{background:var(--fig)}
+.btn.ghost{background:transparent;border:1px solid #C9D3C5;color:var(--leaf);min-height:44px;font-size:14px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.tog{min-height:44px;border-radius:12px;border:1.5px solid var(--c,var(--leaf));background:#fff;color:var(--c,var(--leaf));font-weight:700;font-size:14px;cursor:pointer;padding:0 12px}
+.tog[aria-pressed="true"]{background:var(--c,var(--leaf));color:#fff}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.month{background:var(--fig);color:#fff;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.month .name{font-family:var(--display);font-size:34px;font-weight:700;line-height:1}
+.rhythm{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.rhythm div{border:1px solid rgba(255,255,255,.5);border-radius:10px;padding:7px 4px;text-align:center;font-size:12px;font-weight:600}
+.rhythm .done{background:rgba(255,255,255,.22);border-color:transparent}
+.rhythm .now{background:#fff;color:var(--fig);font-weight:700;border-color:#fff}
+.bar{flex:1;height:8px;background:var(--leaf-soft);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:8px;background:var(--leaf)}
+textarea,input[type=text]{font:inherit;font-size:16px;border:1px solid #C9D3C5;border-radius:12px;padding:12px;background:#FAFBF8;color:var(--ink);width:100%}
+textarea{resize:vertical;line-height:1.4}
+label{font-size:15px;font-weight:600}
+.lock{display:flex;align-items:center;gap:12px;background:#EDF1EA;border:1px dashed #A9B8A5;border-radius:12px;padding:14px;color:var(--muted);font-size:14px}
+.banner{background:var(--leaf);color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;font-weight:600}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:var(--soft);border-radius:12px;padding:4px;gap:4px}
+.seg a{min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px;color:var(--muted);font-size:14px;font-weight:600;text-decoration:none}
+.seg a[aria-current]{background:#fff;color:var(--ink);font-weight:700}
+.rates{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.rates button{min-height:44px;border-radius:10px;border:1.5px solid #C9D3C5;background:#fff;font-size:15px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
+.rates button[aria-pressed="true"]{background:var(--fig);border-color:var(--fig);color:#fff}
+.orchard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.orchard button{min-height:92px;border-radius:14px;border:2px solid transparent;background:#F7F9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:6px 4px}
+.orchard button.now{background:var(--fig-soft)}
+.orchard button[aria-pressed="true"]{border-color:var(--ink)}
+.orchard small{font-size:11px;font-weight:600;color:var(--muted)}
+.orchard b{font-size:13px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dow{font-size:11px;font-weight:700;color:var(--muted);text-align:center}
+.cal button{height:44px;border-radius:10px;border:2px solid transparent;font-size:14px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums;padding:0}
+.cal button[aria-pressed="true"]{border-color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.avatars{display:flex;flex-wrap:wrap;gap:10px}
+.avatars div{display:flex;flex-direction:column;align-items:center;gap:4px;width:58px;font-size:11px;text-align:center;color:var(--muted)}
+.avatars span{width:48px;height:48px;border-radius:999px;background:#DCE6D9;color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.video{width:96px;height:64px;flex-shrink:0;border-radius:10px;background:var(--ink);display:flex;align-items:center;justify-content:center}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs div{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));height:72px}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted);text-decoration:none}
+nav.tabs a[aria-current]{color:var(--fig);font-weight:700}
+/* leader view */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.tile{background:#fff;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:4px}
+.tile b{font-family:var(--display);font-size:36px;font-variant-numeric:tabular-nums}
+.cols{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.cols>.main{flex:999 1 600px;min-width:0}
+.cols>.side{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th{text-align:left;color:var(--muted);font-size:13px;font-weight:600;padding:8px 10px}
+td{padding:11px 10px;border-top:1px solid var(--soft);vertical-align:top}
+th:first-child,td:first-child{padding-left:0}
+@media (prefers-reduced-motion:no-preference){.card,.tile{transition:box-shadow .15s}}
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+
+<script>
+/* ============================================================
+   CONFIGURATION: same pattern as RCI Productions.
+   Fill these in after registering the app in Microsoft Entra ID
+   and creating the SharePoint site (see README.md).
+   Leave clientId empty to run in demo mode with sample data.
+   ============================================================ */
+const CONFIG = {
+  clientId: "",                 // Application (client) ID from Entra ID, e.g. "RCI Marriage"
+  tenantId: "",                 // Directory (tenant) ID, so guest (outside) couples can sign in
+  appHosts: [".github.io"],     // addresses the app may run live at; anywhere else is demo mode
+  siteHost: "",                 // e.g. "contoso.sharepoint.com"
+  sitePath: "/sites/RCIMarriage",
+  lists: {
+    couples: "",      // Couples: one row per couple (spouse emails, Branch)
+    answers: "",      // Prompt Answers: author-only reads
+    reveals: "",      // Reveals: written by Power Automate, shared with the two spouses only
+    checkins: "",     // Sunday Check-ins: author-only reads, shared to spouse by flow
+    participation: "",// Participation: no content, leaders read this
+    mentorRequests: "",
+    content: "",      // Monthly Content: prompts, videos, challenges (leaders edit)
+    rsvps: ""
+  },
+  leaders: []         // sign-ins that see the leader dashboard
+};
+const onAppHost = CONFIG.appHosts.some(h => h.startsWith(".") ? location.hostname.endsWith(h) : location.hostname === h);
+const DEMO = !CONFIG.clientId || /[?&]demo\b/.test(location.search) || !onAppHost;
+const APP_VERSION = "1";
+
+/* ---------- content (moves to the Monthly Content list when live) ---------- */
+const TYPES = {
+  Reflect:["#DCE6F2","#1F4A70"], Faith:["#E3ECE2","#1F4A2E"], Fun:["#FDF1D8","#6B4800"],
+  Appreciate:["#F6E9EF","#7B2D52"], Plan:["#E4E1EE","#3D3366"], "Check-in":["#1E2A22","#FFFFFF"]
+};
+const JAN = [
+  ["What one word do you hope describes our marriage at the end of 2027?","Fun"],
+  ["What moment from 2026 made you feel most like “us”?","Appreciate"],
+  ["Sunday check-in","Check-in"],
+  ["Jesus says we can do nothing apart from the vine. Where do you feel most disconnected from God right now?","Faith"],
+  ["What small daily habit helps you feel connected to me?","Reflect"],
+  ["When do you feel most at home with me?","Appreciate"],
+  ["What do you need more of from me this season: time, touch, words, help or space? Why?","Reflect"],
+  ["What's the best time of day for us to really talk, and the worst?","Reflect"],
+  ["Pick a 20-minute “vine time” we can protect every week. When and where?","Plan"],
+  ["Sunday check-in","Check-in"],
+  ["What pulls us away from each other most right now: phones, schedules, kids, work or something else?","Reflect"],
+  ["How can I pray for you this week, specifically?","Faith"],
+  ["What's something I do that makes you feel cared for, that I might not realize?","Appreciate"],
+  ["If we had a free Saturday with nothing on the calendar, how would you want to spend it together?","Fun"],
+  ["What is one thing we might need to cut back on this year so our marriage can grow?","Faith"],
+  ["What hard season did we come through that made us stronger?","Appreciate"],
+  ["Sunday check-in","Check-in"],
+  ["What is one habit of mine you'd gently like me to work on? (Say it kindly; receive it humbly.)","Reflect"],
+  ["What do you want to grow in personally this year, and how can I support you?","Plan"],
+  ["Where have you seen God at work in our marriage lately?","Faith"],
+  ["What's something new you'd like us to try together this year?","Fun"],
+  ["Which fruit comes most naturally to us as a couple: love, joy, peace, patience, kindness, goodness, faithfulness, gentleness or self-control?","Reflect"],
+  ["Which fruit do you most want to grow in yourself this year?","Faith"],
+  ["Sunday check-in","Check-in"],
+  ["Union Goal 1 (spiritual): one thing we'll do together this year to stay connected to God.","Plan"],
+  ["Union Goal 2 (relational): one thing we'll do to protect our time together.","Plan"],
+  ["Union Goal 3 (practical): one thing in our home, money or schedule we want to improve.","Plan"],
+  ["Who is one couple we could encourage or invite into the ministry this year?","Faith"],
+  ["Write one sentence you'd want to read back to me at the Harvest Celebration in December. (Sealed until then.)","Appreciate"],
+  ["What are you most thankful for about me right now?","Appreciate"],
+  ["Sunday check-in + January reflection","Check-in"]
+];
+const MONTHS = [
+  ["Jan","The Vine","done","#2F5D3F"],["Feb","Love","done","#B23A48"],["Mar","Joy","done","#D99A1E"],["Apr","Peace","done","#3E7CB1"],
+  ["May","Patience","now","#7B2D52"],["Jun","Kindness","later"],["Jul","Goodness","later"],["Aug","Faithfulness","later"],
+  ["Sep","Gentleness","later"],["Oct","Self-control","later"],["Nov","Gratitude","later"],["Dec","Harvest","reveal"]
+];
+
+/* ---------- state (demo: kept in this browser only) ---------- */
+const DEFAULT_STATE = {
+  draft:"", submitted:false, pauses:[true,false,false],
+  ratings:{connected:4, heard:3}, need:"", saw:"", mentorCheckin:false, checkinDone:false,
+  orchardSel:4, goalsKept:[true,false,false], branchReq:false,
+  rsvp:null, retreat:false, harvest:false, janDay:25, contacted:{2:true}
+};
+const STORE_KEY = "rci-marriage:demo:v" + APP_VERSION;
+let S = (() => { try { return Object.assign({}, DEFAULT_STATE, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch(_) { return Object.assign({}, DEFAULT_STATE); } })();
+function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(_){} }
+function set(patch){ Object.assign(S, patch); save(); render(); }
+
+/* ---------- helpers ---------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const typePill = t => `<span class="pill" style="background:${TYPES[t][0]};color:${TYPES[t][1]}">${esc(t)}</span>`;
+const pressed = b => `aria-pressed="${b ? "true" : "false"}"`;
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const janDow = d => DOW[(d + 4) % 7];   // Jan 1, 2027 is a Friday
+const ICON = {
+  today:'<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  us:'<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
+  grow:'<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9M12 12c0-4 3-7 8-7 0 4-3 7-8 7zM12 14c0-3-2.5-5.5-7-5.5 0 3 2.5 5.5 7 5.5z"/></svg>',
+  branch:'<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 2 6 5.5"/></svg>',
+  gather:'<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  lock:'<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  play:'<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>'
+};
+const TAB_OF = {today:"today", reveal:"today", january:"today", checkin:"us", orchard:"us", goals:"us", grow:"grow", branch:"branch", gather:"gather"};
+function tabs(view){
+  const t = TAB_OF[view];
+  const item = (id, href, label) => `<a href="#${href}" ${t === id ? 'aria-current="page"' : ""}>${ICON[id]}${label}</a>`;
+  return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Today")}${item("us","checkin","Us")}${item("grow","grow","Grow")}${item("branch","branch","Branch")}${item("gather","gather","Gather")}</div></nav>`;
+}
+function head(eyebrow, title, back){
+  return `<header class="head">${back ? `<a class="back" href="#${back[0]}">‹ ${esc(back[1])}</a>` : ""}${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ""}<h1>${title}</h1></header>`;
+}
+
+/* ---------- views ---------- */
+const V = {};
+V.today = () => `
+  ${head("Tuesday, May 11 · Week 2 of 4", "Good morning, Marcus &amp; Tasha")}
+  <main>
+    <section class="month" aria-label="This month">
+      <div class="row"><span class="label">May fruit</span><span style="font-size:12px;font-weight:600">Fruit of Our Union</span></div>
+      <div class="name">Patience</div>
+      <div style="font-size:15px;line-height:1.4">“Love is patient, love is kind.” <span style="opacity:.85">1 Corinthians 13:4</span></div>
+      <div class="rhythm"><div class="done">Plant ✓</div><div class="now">Water</div><div>Grow</div><div>Harvest</div></div>
+    </section>
+    <section class="card">
+      <div class="row"><span class="label" style="color:var(--fig)">Reveal Together · Appreciate</span>
+        <span class="pill" style="background:var(--leaf-soft);color:var(--leaf)">${S.submitted ? "Both answered" : "Tasha answered"}</span></div>
+      <div class="big">When did your spouse show you patience this week that you never thanked them for?</div>
+      <a class="btn" href="#reveal">${S.submitted ? "See both answers" : "Answer privately"}</a>
+    </section>
+    <a class="card" href="#grow">
+      <span class="label" style="color:var(--leaf)">This week’s challenge · Water</span>
+      <div style="font-size:16px;font-weight:600">The 10-second pause</div>
+      <p class="sub">Before you answer in a tense moment, stop and breathe together. Log three pauses this week.</p>
+      <div class="row"><div class="bar"><i style="width:${S.pauses.filter(Boolean).length / 3 * 100}%"></i></div><span style="font-size:13px;font-weight:600">${S.pauses.filter(Boolean).length} of 3</span></div>
+    </a>
+    <div class="grid2">
+      <a class="card" href="#checkin" style="gap:4px"><span style="font-size:12px;font-weight:700;color:var(--muted)">Sunday check-in</span><span style="font-weight:600">${S.checkinDone ? "Sent ✓" : "Due May 16"}</span><span class="sub" style="font-size:13px">2 minutes</span></a>
+      <a class="card" href="#gather" style="gap:4px"><span style="font-size:12px;font-weight:700;color:var(--muted)">Harvest gathering</span><span style="font-weight:600">Sat, May 29</span><span class="sub" style="font-size:13px">[TIME, PLACE]</span></a>
+    </div>
+    <a class="card" href="#january" style="flex-direction:row;justify-content:space-between;align-items:center"><span><span class="label" style="color:var(--muted)">Preview</span><br><span style="font-weight:600">January prompts · The Vine</span></span><span aria-hidden="true">›</span></a>
+  </main>`;
+
+V.reveal = () => {
+  const done = S.submitted;
+  return `
+  ${head("", "When did your spouse show you patience this week that you never thanked them for?", ["today","Today"]).replace('<h1>', '<div class="label" style="color:var(--fig)">Reveal Together · May 11</div><h1 style="font-size:23px;line-height:1.25">')}
+  <main>
+    <p class="sub" style="margin-top:-6px">Answer on your own. Both answers unlock once you have both replied.</p>
+    ${done ? `<div class="banner">Both answers are unlocked. Read them together tonight.</div>` : ""}
+    <section class="card">
+      <div class="row"><b style="font-size:14px">Marcus (you)</b><span style="font-size:12px;font-weight:600;color:var(--muted)">${done ? "Answered just now" : "Not answered yet"}</span></div>
+      ${done ? `<div style="font-size:15px;line-height:1.45;white-space:pre-wrap">${esc(S.draft)}</div>` : `
+        <label for="reveal-answer" style="font-size:13px;font-weight:500;color:var(--muted)">Only you can see this until Tasha’s answer unlocks too.</label>
+        <textarea id="reveal-answer" rows="4" data-input="draft" placeholder="Type your answer…">${esc(S.draft)}</textarea>
+        <button class="btn" type="button" data-act="submit-reveal" ${S.draft.trim() ? "" : "disabled"}>Lock in my answer</button>`}
+    </section>
+    <section class="card">
+      <div class="row"><b style="font-size:14px">Tasha</b><span style="font-size:12px;font-weight:600;color:var(--leaf)">Answered 7:42 am</span></div>
+      ${done ? `<div style="font-size:15px;line-height:1.45">Thursday night, when I was short with you after work. You didn’t snap back. You made tea and waited until I was ready to talk.</div>`
+             : `<div class="lock">${ICON.lock}Hidden until you answer.</div>`}
+    </section>
+    ${done ? `<section class="card" style="background:var(--fig-soft);box-shadow:none"><span class="label" style="color:var(--fig)">Talk about it</span><div style="font-size:15px;line-height:1.4">Take 5 minutes to talk about what you each wrote. No fixing, just listening.</div></section>
+      <button class="btn ghost" type="button" data-act="reset-reveal">Reset demo</button>` : ""}
+  </main>`;
+};
+
+V.grow = () => {
+  const n = S.pauses.filter(Boolean).length;
+  return `
+  ${head("May · Ephesians 4:2", "Patience, week by week")}
+  <main>
+    <section class="card">
+      <div class="row"><span class="label" style="color:var(--leaf)">Week 1 · Plant · May 2–8</span><span class="pill" style="background:var(--leaf-soft);color:var(--leaf)">Done</span></div>
+      <div style="display:flex;gap:12px;align-items:center"><div class="video">${ICON.play}</div><div><div style="font-weight:600">Leader video: Patience</div><div class="sub" style="font-size:13px">[VIDEO LENGTH] · plus the May devotional</div></div></div>
+    </section>
+    <section class="card" style="border:2px solid var(--leaf)">
+      <div class="row"><span class="label" style="color:var(--leaf)">Week 2 · Water · May 9–15</span><span class="pill" style="background:var(--leaf);color:#fff">This week</span></div>
+      <div class="big">The 10-second pause</div>
+      <p class="sub">Before you answer in a tense moment, stop and breathe together. Tap a pause each time you do it.</p>
+      <div class="grid3">${S.pauses.map((d,i) => `<button class="tog" type="button" data-act="pause" data-i="${i}" ${pressed(d)} style="min-height:52px">Pause ${i+1}${d ? " ✓" : ""}</button>`).join("")}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--leaf)">${n === 3 ? "Challenge complete. Well done, you two." : n + " of 3 pauses logged"}</div>
+    </section>
+    <section class="card">
+      <span class="label" style="color:var(--muted)">Week 3 · Grow · May 16–22</span>
+      <div style="font-weight:600">Share and pray with your Branch</div>
+      <p class="sub">Bring one place where patience is hard for you right now.</p>
+      <a href="#branch" style="font-weight:600;min-height:44px;display:flex;align-items:center">Open your Branch ›</a>
+    </section>
+    <section class="card">
+      <span class="label" style="color:var(--muted)">Week 4 · Harvest · May 23–29</span>
+      <div style="font-weight:600">May gathering</div>
+      <p class="sub">Finish the month and Patience is added to your Orchard.</p>
+      <a href="#orchard" style="font-weight:600;min-height:44px;display:flex;align-items:center">See Our Orchard ›</a>
+    </section>
+  </main>`;
+};
+
+const usSeg = cur => `<div class="seg"><a href="#checkin" ${cur === "checkin" ? 'aria-current="page"' : ""}>Check-in</a><a href="#orchard" ${cur === "orchard" ? 'aria-current="page"' : ""}>Our Orchard</a></div>`;
+V.checkin = () => {
+  const defs = [["connected","Connected"],["heard","Heard"],["spiritual","Spiritually together"],["fun","Having fun"]];
+  const rated = defs.filter(d => S.ratings[d[0]]).length;
+  if (S.checkinDone) return `
+    <header class="head">${usSeg("checkin")}<h1 style="margin-top:8px">Sunday check-in</h1><div class="eyebrow">May 16 · Shared only with Tasha</div></header>
+    <main>
+      <section class="card" style="background:var(--leaf);color:#fff"><h2 style="margin:0;font-size:22px">Check-in sent</h2><p style="margin:0;font-size:14px;line-height:1.4">Tasha will see your answers once she finishes hers. Your Branch leaders only see that you checked in.</p></section>
+      <section class="card">${defs.map(d => `<div class="row" style="font-size:15px"><span>${d[1]}</span><b>${S.ratings[d[0]] ? S.ratings[d[0]] + " / 5" : "Skipped"}</b></div>`).join("")}
+        ${S.mentorCheckin ? `<div class="row" style="font-size:15px"><span>Mentor couple</span><b>Heads-up sent</b></div>` : ""}</section>
+      <button class="btn ghost" type="button" data-act="checkin-edit">Edit my check-in</button>
+    </main>`;
+  return `
+    <header class="head">${usSeg("checkin")}<h1 style="margin-top:8px">Sunday check-in</h1><div class="eyebrow">May 16 · Shared only with Tasha</div></header>
+    <main>
+      <section class="card" style="gap:14px">
+        <p class="sub" style="font-size:13px">This week, how much did you feel… (1 = not at all, 5 = very)</p>
+        ${defs.map(d => `<div style="display:flex;flex-direction:column;gap:6px"><div style="font-weight:600">${d[1]}</div>
+          <div class="rates" role="group" aria-label="${d[1]}">${[1,2,3,4,5].map(n => `<button type="button" data-act="rate" data-k="${d[0]}" data-n="${n}" ${pressed(S.ratings[d[0]] === n)}>${n}</button>`).join("")}</div></div>`).join("")}
+      </section>
+      <section class="card">
+        <label for="need">One thing I need this week</label>
+        <input id="need" type="text" data-input="need" value="${esc(S.need)}" placeholder="e.g. a quiet evening, just us">
+        <label for="saw" style="margin-top:6px">Where I saw patience in you</label>
+        <input id="saw" type="text" data-input="saw" value="${esc(S.saw)}" placeholder="e.g. with the kids at bedtime">
+      </section>
+      <section class="card">
+        <button class="tog" type="button" data-act="mentor-checkin" ${pressed(S.mentorCheckin)} style="--c:var(--fig);text-align:left;min-height:48px">${S.mentorCheckin ? "✓ " : ""}We’d like our mentor couple to reach out</button>
+        <p class="sub" style="font-size:13px">Optional. Only your mentor couple gets a heads-up, with no details.</p>
+      </section>
+      <button class="btn" type="button" data-act="checkin-send" style="min-height:48px">${rated < 4 ? `Send check-in (${rated} of 4 rated)` : "Send check-in"}</button>
+    </main>`;
+};
+
+V.orchard = () => {
+  const sel = S.orchardSel, m = MONTHS[sel];
+  const det = sel === 0 ? ["Gathered · Union Goals set","You finished January’s prompts and wrote your three Union Goals for 2027 (Jan 25–27)."]
+    : {done:["Gathered","You finished the video, the couple challenge, your Branch share and the monthly gathering."],
+       now:["In progress: 2 of 4 weeks","Plant is done and Water is underway. Finish Grow and Harvest to add Patience to your Orchard."],
+       later:["Opens in " + m[0],"This fruit starts with the leader video and devotional in week 1 of the month."],
+       reveal:["Revealed together","Your full Orchard is unveiled at the Harvest Celebration, with every couple in the ministry."]}[m[2]];
+  return `
+  <header class="head">${usSeg("orchard")}<h1 style="margin-top:8px">Our Orchard</h1><div class="eyebrow" style="line-height:1.4">5 of 12 gathered. The full Orchard is revealed at the Harvest Celebration in December.</div></header>
+  <main>
+    <section class="card orchard" style="display:grid">
+      ${MONTHS.map((x,i) => {
+        const st = x[2], fill = st === "done" ? x[3] : st === "now" ? "#E7C6D5" : "none", stroke = st === "done" ? x[3] : st === "now" ? "#7B2D52" : "#A9B8A5";
+        return `<button type="button" data-act="orchard" data-i="${i}" ${pressed(i === sel)} class="${st === "now" ? "now" : ""}" aria-label="${x[0]}, ${x[1]}, ${st === "done" ? "gathered" : st === "now" ? "in progress" : "not yet"}">
+          <svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="23" r="12" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-dasharray="${st === "done" ? "0" : "3 3"}"/><path d="M20 11c0-4.5 3.5-7 8-7 0 4.5-3.5 7-8 7z" fill="${st === "done" || st === "now" ? "#2F5D3F" : "#C9D3C5"}"/></svg>
+          <small>${x[0]}</small><b>${x[1]}</b></button>`;
+      }).join("")}
+    </section>
+    <section class="card"><span class="label" style="color:var(--fig)">${m[0]} · ${m[1]}</span><div style="font-size:16px;font-weight:600">${det[0]}</div><p class="sub">${det[1]}</p></section>
+    <a class="card" href="#goals" style="flex-direction:row;justify-content:space-between;align-items:center;font-weight:600">Our three Union Goals for 2027<span aria-hidden="true" style="color:var(--leaf)">›</span></a>
+  </main>`;
+};
+
+V.goals = () => {
+  const G = [["Goal 1 · Spiritual","Jan 25","Pray together before bed, Sunday through Thursday.","#2F5D3F"],
+             ["Goal 2 · Relational","Jan 26","Protect our vine time: Saturday mornings, coffee on the porch, phones away.","#7B2D52"],
+             ["Goal 3 · Practical","Jan 27","Sit down together on the first Sunday of each month to plan our budget.","#1F4A70"]];
+  return `
+  ${head("Written together Jan 25–27. Example answers shown.", "Our Union Goals for 2027", ["orchard","Our Orchard"])}
+  <main>
+    ${G.map((g,i) => `<section class="card"><div class="row"><span class="label" style="color:${g[3]}">${g[0]}</span><span style="font-size:12px;font-weight:600;color:var(--muted)">${g[1]}</span></div>
+      <div style="font-size:16px;font-weight:600;line-height:1.4">${g[2]}</div>
+      <button class="tog" type="button" data-act="goal" data-i="${i}" ${pressed(S.goalsKept[i])} style="align-self:flex-start;font-size:13px;min-height:40px">${S.goalsKept[i] ? "Kept this month ✓" : "Mark kept this month"}</button></section>`).join("")}
+    <section class="card" style="background:var(--ink);color:#fff;flex-direction:row;align-items:center;gap:12px">${ICON.lock}
+      <div><div style="font-weight:600">2 sealed notes from Jan 29</div><div style="font-size:13px;opacity:.85;line-height:1.4">One sentence each, read back to each other at the Harvest Celebration in December.</div></div></section>
+  </main>`;
+};
+
+V.branch = () => `
+  ${head("Your Branch · 5 couples", "Olive Branch")}
+  <main>
+    <section class="card"><span class="label" style="color:var(--muted)">Couples</span>
+      <div class="avatars">
+        <div><span style="background:var(--fig);color:#fff">J&amp;R</span>Mentors</div>
+        <div><span style="background:var(--leaf);color:#fff">M&amp;T</span>You</div>
+        <div><span>D&amp;L</span>Dre &amp; Lisa</div><div><span>K&amp;A</span>Kevin &amp; Amy</div><div><span>S&amp;N</span>Sam &amp; Nia</div>
+      </div></section>
+    <section class="card"><span class="label" style="color:var(--leaf)">Next: Grow week · from May 16</span>
+      <div style="font-weight:600">Share one place where patience is hard for you right now, then pray for each other.</div>
+      <p class="sub" style="font-size:13px">Branch meetup: [DAY, TIME] · [PLACE]</p></section>
+    <section class="card"><span class="label" style="color:var(--fig)">Your mentor couple</span><div style="font-size:16px;font-weight:600">James &amp; Renee</div>
+      ${S.branchReq ? `<div style="background:var(--fig-soft);border-radius:12px;padding:12px;font-size:14px;line-height:1.4">Request sent. James &amp; Renee will reach out this week.</div><button class="btn ghost" type="button" data-act="branch-req">Cancel request</button>`
+        : `<p class="sub">Want to talk something through? Ask them to reach out. Only James &amp; Renee see the request, and nothing you’ve written in the app is shared.</p><button class="btn fig" type="button" data-act="branch-req">We’d like our mentor couple to reach out</button>`}
+    </section>
+  </main>`;
+
+V.gather = () => `
+  ${head("RCI Marriage Ministry · 2027", "Gather")}
+  <main>
+    <section class="card"><span class="label" style="color:var(--leaf)">This month · Harvest week</span><div class="big">May gathering: Patience</div><p class="sub">Sat, May 29 · [TIME] · [PLACE]</p>
+      <div class="grid2"><button class="tog" type="button" data-act="rsvp" data-v="yes" ${pressed(S.rsvp === "yes")}>We’re going</button><button class="tog" type="button" data-act="rsvp" data-v="maybe" ${pressed(S.rsvp === "maybe")}>Maybe</button></div></section>
+    <a class="card" href="#grow" style="background:var(--ink);color:#fff;flex-direction:row;align-items:center;gap:12px">
+      <span style="width:44px;height:44px;border-radius:999px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="#1E2A22"><path d="M8 5v14l11-7z"/></svg></span>
+      <span><b style="display:block;font-weight:600">Watch May’s leader video</b><span style="font-size:13px;opacity:.85">Patience, with the ministry leaders</span></span></a>
+    <section class="card"><span class="label" style="color:var(--fig)">Marriage Retreat 2027</span><div class="big">[RETREAT DATES]</div><p class="sub">[VENUE] · Registration opens [DATE]</p>
+      <button class="tog" type="button" data-act="retreat" ${pressed(S.retreat)} style="--c:var(--fig)">${S.retreat ? "Interested ✓ We’ll get the first invite" : "We’re interested"}</button></section>
+    <section class="card"><span class="label" style="color:var(--gold)">December · Year-end</span><div class="big">Harvest Celebration</div><p class="sub">[DATE] · [PLACE]. Every couple’s full Orchard is revealed together.</p>
+      <button class="tog" type="button" data-act="harvest" ${pressed(S.harvest)} style="--c:var(--gold)">${S.harvest ? "Seats saved ✓" : "Save our seats"}</button></section>
+  </main>`;
+
+V.january = () => {
+  const d = S.janDay, p = JAN[d-1];
+  let note = "";
+  if (d >= 25 && d <= 27) note = "Saved to Our Orchard as one of your three Union Goals.";
+  if (d === 29) note = "Sealed until the Harvest Celebration in December.";
+  if (p[1] === "Check-in") note = d === 31 ? "Adds one reflection: which prompt this month led to our best conversation, and why?" : "No prompt on Sundays. Do the check-in instead.";
+  const wk = d <= 7 ? "Week 1 · Plant" : d <= 14 ? "Week 2 · Water" : d <= 21 ? "Week 3 · Grow" : "Week 4 · Harvest";
+  return `
+  ${head("John 15:5 · 26 prompts · 5 check-ins", "January · The Vine", ["today","Today"])}
+  <main>
+    <div class="chips">${Object.keys(TYPES).map(typePill).join("")}</div>
+    <section class="card" style="padding:12px">
+      <div class="cal">${["S","M","T","W","T","F","S"].map(x => `<div class="dow">${x}</div>`).join("")}
+        ${"<div></div>".repeat(5)}
+        ${JAN.map((q,i) => `<button type="button" data-act="jan" data-d="${i+1}" ${pressed(i+1 === d)} aria-label="January ${i+1}, ${q[1]}" style="background:${TYPES[q[1]][0]};color:${TYPES[q[1]][1]}">${i+1}</button>`).join("")}
+      </div>
+    </section>
+    <section class="card">
+      <div class="row"><span class="label" style="color:var(--muted);letter-spacing:.06em">${janDow(d)}, Jan ${d} · ${wk}</span>${typePill(p[1])}</div>
+      <div style="font-size:16px;font-weight:600;line-height:1.4">${esc(p[0])}</div>
+      ${note ? `<div style="font-size:13px;line-height:1.4;color:var(--fig);font-weight:600">${note}</div>` : ""}
+    </section>
+  </main>`;
+};
+
+V.leaders = () => {
+  const chip = {Healthy:["#E3ECE2","#1F4A2E"], Watch:["#FDF1D8","#6B4800"], "Reach out":["#F6E9EF","#7B2D52"]};
+  const BR = [["Olive","James & Renee",5,"5 of 5","Healthy"],["Fig","Carl & Monique",4,"4 of 5","Healthy"],["Vine","Paul & Grace",4,"3 of 5","Healthy"],
+              ["Cedar","Andre & Kim",3,"2 of 5","Watch"],["Palm","Luis & Maria",3,"3 of 5","Watch"],["Almond","Terry & Joy",1,"1 of 5","Reach out"]];
+  const RQ = [["Dre & Lisa","Olive","today"],["Ben & Alicia","Cedar","May 9"],["Ray & Dana","Almond","May 3"]];
+  const open = RQ.filter((_,i) => !S.contacted[i]).length;
+  const ST = {L:["Live","#2F5D3F","#fff"], R:["Ready","#DCE6F2","#1F4A70"], D:["Drafting","#FDF1D8","#6B4800"], N:["Not started","#EEF0EC","#56635A"]};
+  const PLAN = [["Jan","The Vine","LLLL"],["Feb","Love","LLLL"],["Mar","Joy","LLLL"],["Apr","Peace","LLLL"],["May","Patience","LLLR"],["Jun","Kindness","RRRD"],
+                ["Jul","Goodness","DDRN"],["Aug","Faithfulness","NDDN"],["Sep","Gentleness","NNDN"],["Oct","Self-control","NNNN"],["Nov","Gratitude","NNNN"],["Dec","Harvest Celebration","NNND"]];
+  const sp = k => `<span class="pill" style="background:${ST[k][1]};color:${ST[k][2]}">${ST[k][0]}</span>`;
+  return `
+  <header class="head" style="padding:28px 24px 8px;flex-direction:row;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px">
+    <div><div class="label" style="color:var(--fig)">Leader dashboard · May 2027 · Patience</div><h1 style="font-size:40px;margin-top:6px">How the ministry is growing</h1></div>
+    <div class="chips"><span class="pill" style="background:var(--ink);color:#fff;padding:8px 12px">Participation only, never what couples write</span><a class="pill" href="#today" style="background:#fff;border:1px solid var(--line);padding:8px 12px;text-decoration:none">Back to couple view</a></div>
+  </header>
+  <main style="padding:16px 24px 48px;gap:20px">
+    <div class="tiles">
+      <div class="tile"><span class="sub">Couples enrolled</span><b>30</b><span class="sub" style="font-size:13px">6 Branches</span></div>
+      <div class="tile"><span class="sub">Took part in May so far</span><b>24 of 30</b><span class="sub" style="font-size:13px">Watched, answered or checked in</span></div>
+      <div class="tile"><span class="sub">Retreat interest</span><b>18</b><span class="sub" style="font-size:13px">couples · capacity [N]</span></div>
+      <div class="tile" style="border:2px solid var(--fig)"><span class="sub" style="color:var(--fig)">Open mentor requests</span><b>${open}</b><span class="sub" style="font-size:13px">Reach out within a week</span></div>
+    </div>
+    <div class="cols">
+      <section class="card main" style="padding:22px"><h2 style="margin:0;font-size:22px">Branch health</h2>
+        <div class="scroll"><table style="min-width:600px"><thead><tr><th>Branch</th><th>Mentor couple</th><th>Sunday check-ins</th><th>Reveal Together this week</th><th>Status</th></tr></thead><tbody>
+        ${BR.map(b => `<tr><td><b>${b[0]}</b></td><td>${esc(b[1])}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:none;width:90px"><i style="width:${b[2]*20}%"></i></div>${b[2]} of 5</div></td><td>${b[3]}</td><td><span class="pill" style="background:${chip[b[4]][0]};color:${chip[b[4]][1]}">${b[4]}</span></td></tr>`).join("")}
+        </tbody></table></div></section>
+      <div class="side">
+        <section class="card" style="padding:22px"><h2 style="margin:0;font-size:22px">Mentor requests</h2>
+          ${RQ.map((r,i) => `<div class="row" style="border-top:1px solid var(--soft);padding-top:10px"><div><b>${esc(r[0])}</b><div class="sub" style="font-size:13px">${r[1]} · asked ${r[2]}</div></div>
+            <button class="tog" type="button" data-act="contacted" data-i="${i}" ${pressed(!!S.contacted[i])} style="--c:var(--fig);font-size:13px;min-height:40px;white-space:nowrap">${S.contacted[i] ? "Contacted ✓" : "Mark contacted"}</button></div>`).join("")}</section>
+        <section class="card" style="padding:22px"><h2 style="margin:0;font-size:22px">Sign-ups</h2>
+          ${[["May gathering","19 going",63,"#2F5D3F"],["Marriage Retreat","18 interested",60,"#7B2D52"],["Harvest Celebration","22 seats saved",73,"#D99A1E"]].map(s => `<div style="display:flex;flex-direction:column;gap:6px"><div class="row" style="font-size:14px"><b style="font-weight:600">${s[0]}</b><span>${s[1]}</span></div><div class="bar" style="height:10px"><i style="height:10px;width:${s[2]}%;background:${s[3]}"></i></div></div>`).join("")}</section>
+      </div>
+    </div>
+    <section class="card" style="padding:22px"><div class="row" style="flex-wrap:wrap"><h2 style="margin:0;font-size:22px">Content schedule</h2><div class="chips">${Object.keys(ST).map(sp).join("")}</div></div>
+      <div class="scroll"><table style="min-width:720px"><thead><tr><th>Month</th><th>Fruit</th><th>Leader video</th><th>Devotional</th><th>Couple challenge</th><th>Gathering</th></tr></thead><tbody>
+      ${PLAN.map(p => `<tr style="${p[0] === "May" ? "background:var(--fig-soft)" : ""}"><td><b>${p[0]}</b></td><td>${p[1]}</td>${p[2].split("").map(k => `<td>${sp(k)}</td>`).join("")}</tr>`).join("")}
+      </tbody></table></div></section>
+  </main>`;
+};
+
+/* ---------- render + routing ---------- */
+const VIEWS = Object.keys(V);
+function current(){ const h = location.hash.slice(1); return VIEWS.includes(h) ? h : "today"; }
+function render(){
+  const view = current(), app = document.getElementById("app");
+  const wide = view === "leaders";
+  app.className = "app" + (wide ? " wide" : "");
+  const demoBar = DEMO ? `<div class="demo"><span>Demo · sample data, saved on this device only</span>${wide ? "" : `<button type="button" onclick="location.hash='leaders'">Leader view</button>`}</div>` : "";
+  const keepFocus = document.activeElement && document.activeElement.id;
+  app.innerHTML = demoBar + V[view]() + (wide ? "" : tabs(view));
+  if (keepFocus){ const el = document.getElementById(keepFocus); if (el) el.focus(); }
+}
+let lastView = null;
+window.addEventListener("hashchange", () => { render(); if (current() !== lastView){ window.scrollTo(0,0); lastView = current(); } });
+
+document.addEventListener("input", e => {
+  const k = e.target.dataset && e.target.dataset.input; if (!k) return;
+  S[k] = e.target.value; save();
+  if (k === "draft"){ const b = document.querySelector('[data-act="submit-reveal"]'); if (b) b.disabled = !S.draft.trim(); }
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const i = Number(b.dataset.i), act = b.dataset.act;
+  if (act === "submit-reveal" && S.draft.trim()) set({submitted:true});
+  if (act === "reset-reveal") set({submitted:false, draft:""});
+  if (act === "pause"){ const p = S.pauses.slice(); p[i] = !p[i]; set({pauses:p}); }
+  if (act === "rate") set({ratings: Object.assign({}, S.ratings, {[b.dataset.k]: Number(b.dataset.n)})});
+  if (act === "mentor-checkin") set({mentorCheckin: !S.mentorCheckin});
+  if (act === "checkin-send"){ set({checkinDone:true}); window.scrollTo(0,0); }
+  if (act === "checkin-edit") set({checkinDone:false});
+  if (act === "orchard") set({orchardSel:i});
+  if (act === "goal"){ const g = S.goalsKept.slice(); g[i] = !g[i]; set({goalsKept:g}); }
+  if (act === "branch-req") set({branchReq: !S.branchReq});
+  if (act === "rsvp") set({rsvp: S.rsvp === b.dataset.v ? null : b.dataset.v});
+  if (act === "retreat") set({retreat: !S.retreat});
+  if (act === "harvest") set({harvest: !S.harvest});
+  if (act === "jan") set({janDay: Number(b.dataset.d)});
+  if (act === "contacted") set({contacted: Object.assign({}, S.contacted, {[i]: !S.contacted[i]})});
+});
+
+render(); lastView = current();
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>

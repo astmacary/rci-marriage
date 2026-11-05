@@ -1,0 +1,17 @@
+{
+  "name": "RCI Marriage",
+  "short_name": "RCI Marriage",
+  "description": "Fruit of Our Union: daily prompts, check-ins, Branches and gatherings for the RCI Marriage Ministry.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F3F5EF",
+  "theme_color": "#F3F5EF",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
