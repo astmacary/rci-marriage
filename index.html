@@ -112,7 +112,7 @@ nav.tabs a[aria-current]{color:var(--fig);font-weight:700}
 .brandbar.wide{max-width:1280px}
 .brandbar.wide div{padding:16px 24px 0}
 .brandbar img{height:50px;width:auto;display:block}
-.theme-toggle{width:44px;height:44px;flex-shrink:0;border-radius:999px;border:1px solid rgba(243,238,230,.35);background:transparent;color:var(--cream);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.theme-toggle{width:32px;height:32px;flex-shrink:0;border-radius:999px;border:1px solid rgba(243,238,230,.35);background:transparent;color:var(--cream);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .app{padding-top:0}
 /* live (signed-in) controls, styled like the demo */
 button.card{border:1px solid var(--line);width:100%}
@@ -124,19 +124,22 @@ input[type=date]{appearance:none;-webkit-appearance:none;min-height:48px;text-al
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 [hidden]{display:none!important}
+.theme-toggle svg{width:15px;height:15px}
+nav.tabs button svg{width:28px;height:28px}
 .avatars.big{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:14px 8px}
 .avatars.big .av-btn{width:auto;font-size:12.5px;font-weight:600}
 .avatars.big .av-btn span{width:72px;height:72px;font-size:18px}
 .btn.badge-red{background:#B23A48;border-color:#B23A48;color:#FFFFFF;font-weight:700;align-self:flex-start}
 .brand-theme{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
 .theme-line{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding-left:12px;border-left:1px solid rgba(196,149,95,.5);min-width:0;align-self:stretch}
-.theme-line b{display:block;font-family:var(--display);font-size:16px;letter-spacing:.08em;line-height:1.2;color:var(--cream);white-space:nowrap}
-.theme-line small{display:block;font-size:13px;color:#D4A66E;letter-spacing:.04em;white-space:nowrap}
-@media (max-width:420px){.brandbar div{padding-left:14px;padding-right:14px}.brand-theme{gap:8px}.brand-theme>img{height:40px;width:auto}.theme-line{padding-left:8px;gap:5px}.theme-line b{font-size:14px;letter-spacing:.06em}.theme-line small{font-size:12px}#me-slot .me-btn{width:42px;height:42px}#me-slot .face{width:38px!important;height:38px!important}.theme-toggle{width:40px;height:40px}}
+.theme-line b{display:block;font-family:var(--display);font-size:19px;letter-spacing:.08em;line-height:1.2;color:var(--cream);white-space:nowrap}
+.theme-line small{display:block;font-size:14px;color:#D4A66E;letter-spacing:.04em;white-space:nowrap}
+@media (max-width:420px){.brandbar div{padding-left:14px;padding-right:14px}.brand-theme{gap:8px}.brand-theme>img{height:40px;width:auto}.theme-line{padding-left:8px;gap:5px}.theme-line b{font-size:16px;letter-spacing:.05em}.theme-line small{font-size:13px}#me-slot .me-btn{width:42px;height:42px}#me-slot .face{width:38px!important;height:38px!important}.theme-toggle{width:30px;height:30px}}
 #ptr{position:fixed;top:0;left:0;right:0;height:0;overflow:hidden;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:var(--surface);color:var(--muted);font-weight:600;font-size:13px;border-bottom:1px solid var(--line);transition:height .12s ease;padding-top:env(safe-area-inset-top,0px)}
 #ptr span{padding:0 0 12px}
 #ptr.ready{color:var(--fig)}
-.edit-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:var(--navy);color:var(--brand-gold);cursor:pointer;border:2px solid var(--surface)}
+.edit-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:transparent;color:var(--navy);cursor:pointer;border:2px solid var(--navy)}
+:root[data-theme="dark"] .edit-btn{color:#FFFFFF;border-color:#FFFFFF}
 .cover-edit{position:absolute;top:10px;right:10px}
 .face-wrap{position:relative;display:inline-flex}
 .face-edit{position:absolute;right:-2px;bottom:-2px}
@@ -247,7 +250,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "17";
+const APP_VERSION = "18";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -635,7 +638,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=14" defer></script>
-<script src="live.js?v=14" defer></script>
+<script src="src/data.js?v=15" defer></script>
+<script src="live.js?v=15" defer></script>
 </body>
 </html>

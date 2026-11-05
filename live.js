@@ -334,7 +334,7 @@
   }
   function checkin() {
     return `<form data-form="checkin" style="display:flex;flex-direction:column;gap:12px">
-      <section class="card" style="gap:14px">${label("How we’re doing this week")}<p class="sub" style="font-size:15px;font-weight:600;color:var(--ink)">This week, how much did you feel… (1 = not at all, 5 = very)</p>
+      <section class="card" style="gap:14px">${label("How we’re doing this week")}<p class="sub" style="font-size:15px;font-weight:600;color:var(--ink)">This week, how much did you feel…</p><p class="sub" style="font-size:13px;margin-top:-8px">1 = not at all, 5 = very</p>
       ${["Connected", "Heard", "Spiritually together", "Having fun"].map((name, i) => `<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="font-size:15px;font-weight:600;padding:0;margin-bottom:6px">${name}</legend><div class="rates">${[1,2,3,4,5].map(n => `<label class="rate"><input type="radio" name="rating${i}" value="${n}" required><span>${n}</span></label>`).join("")}</div></fieldset>`).join("")}</section>
       <section class="card"><label for="live-need">One thing I need this week</label><input type="text" id="live-need" name="need" maxlength="6000" placeholder="e.g. a quiet evening, just us">
       <label for="live-saw" style="margin-top:6px">Where I saw God at work in you</label><input type="text" id="live-saw" name="saw" maxlength="6000" placeholder="e.g. with the kids at bedtime"></section>
