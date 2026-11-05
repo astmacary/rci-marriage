@@ -1,6 +1,6 @@
 # RCI Marriage
 
-The RCI Marriage Ministry app for 2027, **Fruit of Our Union**.
+The RCI Marriage Ministry app.
 
 - **Demo:** https://astmacary.github.io/rci-marriage/ (sample couple and data, saved on the viewer's device only)
 - **Leader view in the demo:** https://astmacary.github.io/rci-marriage/#leaders
