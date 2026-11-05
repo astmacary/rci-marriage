@@ -124,6 +124,7 @@ input[type=date]{appearance:none;-webkit-appearance:none;min-height:48px;text-al
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 [hidden]{display:none!important}
+:root[data-theme="dark"] .head .seg{background:var(--surface);border:1px solid #1E2E44}
 /* dark mode: gold for the current page and highlights, bold only for headings */
 :root[data-theme="dark"] nav.tabs button[aria-current]{color:var(--brand-gold)}
 :root[data-theme="dark"] .card .label,:root[data-theme="dark"] .card h2.label{color:var(--brand-gold)!important}
@@ -264,7 +265,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "24";
+const APP_VERSION = "25";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -652,7 +653,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=21" defer></script>
-<script src="live.js?v=21" defer></script>
+<script src="src/data.js?v=22" defer></script>
+<script src="live.js?v=22" defer></script>
 </body>
 </html>
