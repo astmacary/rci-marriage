@@ -75,7 +75,7 @@ a.card{text-decoration:none;color:var(--ink)}
 .rhythm .now{background:var(--brand-gold);color:var(--navy);font-weight:700;border-color:var(--brand-gold)}
 .bar{flex:1;height:8px;background:var(--leaf-soft);border-radius:999px;overflow:hidden}
 .bar i{display:block;height:8px;background:var(--brand-gold)}
-textarea,input[type=text]{font:inherit;font-size:16px;border:1px solid var(--line2);border-radius:12px;padding:12px;background:var(--field);color:var(--ink);width:100%}
+textarea,input[type=text],input[type=tel],input[type=date]{font:inherit;font-size:16px;border:1px solid var(--line2);border-radius:12px;padding:12px;background:var(--field);color:var(--ink);width:100%}
 textarea{resize:vertical;line-height:1.4}
 label{font-size:15px;font-weight:600}
 .lock{display:flex;align-items:center;gap:12px;background:var(--fig-soft);border:1px dashed var(--line2);border-radius:12px;padding:14px;color:var(--muted);font-size:14px}
@@ -117,6 +117,28 @@ button.card{border:1px solid var(--line);width:100%}
 .seg button{min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px;border:0;background:transparent;color:var(--cream);font-size:14px;font-weight:600;cursor:pointer}
 .seg button[aria-current]{background:var(--brand-gold);color:var(--navy);font-weight:700}
 .seg.seg3{grid-template-columns:repeat(3,minmax(0,1fr))}
+input[type=date]{appearance:none;-webkit-appearance:none;min-height:48px;text-align:left;color-scheme:light}
+:root[data-theme="dark"] input[type=date]{color-scheme:dark}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
+[hidden]{display:none!important}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill-check{position:relative}
+.pill-check input{position:absolute;opacity:0;width:1px;height:1px}
+.pill-check span{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;border:1.5px solid var(--fig);color:var(--fig);font-size:14px;font-weight:700;cursor:pointer;background:var(--surface)}
+.pill-check input:checked+span{background:var(--brand-gold);border-color:var(--brand-gold);color:var(--navy)}
+.pill-check input:focus-visible+span{outline:3px solid var(--brand-gold);outline-offset:2px}
+.profile-card{padding:0;overflow:hidden;gap:14px;padding-bottom:16px}
+.cover-wrap{position:relative}
+.cover{width:100%;height:180px;object-fit:cover;display:block}
+.cover-empty{display:flex;align-items:center;justify-content:center;background:var(--soft);color:var(--muted);font-weight:600}
+.cover-btn{position:absolute;right:10px;bottom:10px;background:rgba(10,36,64,.78);color:#F3EEE6;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;margin-top:-56px;position:relative}
+.person{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.person .face{border:3px solid var(--surface)}
+.person b{font-size:16px}
+.btn.small{min-height:34px;font-size:13px;padding:0 12px;margin-top:4px;cursor:pointer}
+nav.tabs button{font-size:10.5px}
 .seg.seg4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .seg.seg4 button{font-size:13px;padding:0 2px}
 /* profile photos */
@@ -202,7 +224,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "11";
+const APP_VERSION = "12";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -590,7 +612,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=8" defer></script>
-<script src="live.js?v=8" defer></script>
+<script src="src/data.js?v=9" defer></script>
+<script src="live.js?v=9" defer></script>
 </body>
 </html>

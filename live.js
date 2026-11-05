@@ -197,18 +197,18 @@
   const label = (text, extra = "") => `<span class="label" style="color:var(--fig)${extra}">${text}</span>`;
   const panel = (lbl, body, extra = "") => `<section class="card"${extra}>${lbl ? label(lbl) : ""}${body}</section>`;
   const tile = (view, lbl, big, small) => `<button type="button" class="card" data-view="${view}" style="gap:4px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)"><span style="font-size:12px;font-weight:700;color:var(--fig)">${lbl}</span><span style="font-size:16px;font-weight:700">${big}</span><span class="sub" style="font-size:13px">${small}</span></button>`;
-  const TAB_OF = { calendar: "today", today: "today", checkin: "us", journal: "us", orchard: "us", grow: "us", profile: "", branch: "branch", gather: "gather" };
+  const TAB_OF = { calendar: "today", today: "today", checkin: "us", journal: "us", orchard: "us", grow: "us", profile: "profile", branch: "branch", gather: "gather" };
   const TAB_ICON = {
-    today: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
-    us: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="13" r="5"/><circle cx="15" cy="13" r="5"/></svg>',
-    grow: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9M12 12c0-4 3-7 8-7 0 4-3 7-8 7zM12 14c0-3-2.5-5.5-7-5.5 0 3 2.5 5.5 7 5.5z"/></svg>',
+    today: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="13" r="5"/><circle cx="15" cy="13" r="5"/></svg>',
+    us: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/></svg>',
     branch: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 2 6 5.5"/></svg>',
-    gather: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'
+    gather: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    profile: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>'
   };
   function tabBar() {
     const cur = TAB_OF[state.view];
     const item = (id, view, text) => `<button type="button" data-view="${view}" ${cur === id ? 'aria-current="page"' : ""} ${state.loading ? "disabled" : ""}>${TAB_ICON[id]}${text}</button>`;
-    return `<nav class="tabs" aria-label="Main"><div style="grid-template-columns:repeat(4,minmax(0,1fr))">${item("today","today","Today")}${item("us","checkin","Check In")}${item("branch","branch","Branch")}${item("gather","gather","Gather")}</div></nav>`;
+    return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Today")}${item("us","checkin","Check In")}${item("branch","branch","Branch")}${item("gather","gather","Gatherings")}${item("profile","profile","Profile")}</div></nav>`;
   }
   function usSeg(cur) {
     const a = (view, text) => `<button type="button" data-view="${view}" ${cur === view ? 'aria-current="page"' : ""}>${text}</button>`;
@@ -225,7 +225,7 @@
     if (v === "journal") return H("Visible to both of you", "Our journal", usSeg("journal"));
     if (v === "grow") return H(`${f[0]} · ${f[2]}`, `${f[1]}, week by week`, usSeg("grow"));
     if (v === "branch") return H("Your Branch", esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
-    if (v === "gather") return H("RCI Marriage Ministry · 2027", "Gather");
+    if (v === "gather") return H("RCI Marriage Ministry · 2027", "Gathering");
     if (v === "profile") return H("Your profile and couple details", "Profile");
     if (v === "leaders") return H("Leader dashboard", "How the ministry is growing");
     return H("", "RCI Marriage");
@@ -409,30 +409,40 @@
   function gather() {
     if (state.errors.content || state.errors.pilotIntake) return card("Gather", empty(state.errors.content || state.errors.pilotIntake));
     const list = gatherings(), t = day();
+    const people = (state.rows.couples || []).map(item => D.read("couples", item)).filter(c => c.kind === "couple" && c.active !== false);
+    const first = n => String(n || "").trim().split(/\s+/)[0];
+    const yearly = ymd => people.flatMap(c => [
+      c.birthday1 && c.birthday1.slice(5) === ymd.slice(5) ? { kind: "birthday", text: `${first(c.spouse1Name) || "Spouse"}’s birthday` } : null,
+      c.birthday2 && c.birthday2.slice(5) === ymd.slice(5) ? { kind: "birthday", text: `${first(c.spouse2Name) || "Spouse"}’s birthday` } : null,
+      c.anniversary && c.anniversary.slice(5) === ymd.slice(5) ? { kind: "anniversary", text: `${[first(c.spouse1Name), first(c.spouse2Name)].filter(Boolean).join(" & ") || "Couple"}’s anniversary`, years: Number(ymd.slice(0, 4)) - Number(c.anniversary.slice(0, 4)) } : null
+    ]).filter(Boolean);
     const on = ymd => list.filter(g => g.date <= ymd && ymd <= g.end);
-    if (!state.gcal) { const next = list.find(g => g.end >= t) || list[0]; const sel = next ? next.date : t; state.gcal = { month: sel.slice(0, 7), sel }; }
+    if (!state.gcal) state.gcal = { month: t.slice(0, 7), sel: t };
     const { month, sel } = state.gcal, [y, m] = month.split("-").map(Number);
     const lead = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
     const start = ymdAdd(`${month}-01`, -lead), weeks = Math.ceil((lead + dim) / 7);
     let cells = "";
     for (let n = 0; n < weeks * 7; n++) {
-      const k = ymdAdd(start, n), ev = on(k);
-      cells += `<button type="button" class="dcell${k.slice(0, 7) !== month ? " out" : ""}${k === t ? " today" : ""}${k === sel ? " sel" : ""}" data-gday="${k}" aria-label="${esc(longDate(k))}${ev.length ? ", " + esc(ev.map(g => g.text).join(", ")) : ""}"><span>${Number(k.slice(8))}</span><span class="dots">${ev.length ? "<i></i>" : ""}</span></button>`;
+      const k = ymdAdd(start, n), ev = on(k), yr = yearly(k);
+      const marks = (ev.length ? "<i></i>" : "") + (yr.some(x => x.kind === "birthday") ? '<span aria-hidden="true">🎂</span>' : "") + (yr.some(x => x.kind === "anniversary") ? '<span aria-hidden="true">💍</span>' : "");
+      cells += `<button type="button" class="dcell${k.slice(0, 7) !== month ? " out" : ""}${k === t ? " today" : ""}${k === sel ? " sel" : ""}" data-gday="${k}" aria-label="${esc(longDate(k))}${[...ev, ...yr].length ? ", " + esc([...ev, ...yr].map(g => g.text).join(", ")) : ""}"><span>${Number(k.slice(8))}</span><span class="dots">${marks}</span></button>`;
     }
     const title = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, 1)));
     const today = on(sel);
-    const detail = today.length ? today.map(g => `<section class="card"><span class="label" style="color:var(--fig)">${esc(g.when || longDate(g.date))}</span>
+    const yrSel = yearly(sel);
+    const celebrate = yrSel.length ? `<section class="card" style="gap:8px">${yrSel.map(x => `<div style="display:flex;align-items:center;gap:10px"><span aria-hidden="true" style="font-size:20px">${x.kind === "birthday" ? "🎂" : "💍"}</span><span style="font-weight:600">${esc(x.text)}${x.kind === "anniversary" && x.years > 0 ? ` <span class="sub" style="font-weight:400">· ${x.years} year${x.years === 1 ? "" : "s"}</span>` : ""}</span></div>`).join("")}</section>` : "";
+    const detail = celebrate + (today.length ? today.map(g => `<section class="card"><span class="label" style="color:var(--fig)">${esc(g.when || longDate(g.date))}</span>
         <div style="font-size:17px;font-weight:700">${esc(g.text)}</div>
         ${g.details ? `<p class="sub" style="white-space:pre-wrap">${esc(g.details)}</p>` : `<p class="sub">Time and place to be announced.</p>`}
         ${D.events.includes(g.event) ? rsvpForm(g.event) : `<p class="sub" style="font-size:13px">RSVPs open closer to the date.</p>`}</section>`).join("")
-      : `<section class="card">${empty("No gathering on this day. Days with a dot have a gathering.")}</section>`;
+      : celebrate ? "" : `<section class="card">${empty("Nothing on this day. Days with a dot have a Gathering, birthday or anniversary.")}</section>`);
     const upcoming = list.map(g => `<button type="button" class="card" data-gday="${g.date}" style="flex-direction:row;justify-content:space-between;align-items:center;cursor:pointer;font:inherit;color:var(--ink);text-align:left;padding:12px 16px"><span style="font-weight:700">${esc(g.text)}</span><span class="sub">${esc(g.when || longDate(g.date))}</span></button>`).join("");
     return `<section class="card cal-panel"><div class="cal-head"><h2>${esc(title)}</h2>
         <button type="button" class="btn ghost" data-gcal="today" style="padding:6px 10px;min-height:0">Today</button>
         <button type="button" class="iconbtn" data-gcal="prev" aria-label="Previous month">‹</button><button type="button" class="iconbtn" data-gcal="next" aria-label="Next month">›</button></div>
         <div class="grid7">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(x => `<div class="dowh">${x}</div>`).join("")}${cells}</div></section>
       <h2 class="label" style="margin:4px 0 0;color:var(--muted)">${esc(longDate(sel))}</h2>${detail}
-      ${list.length ? `<h2 class="label" style="margin:4px 0 0;color:var(--muted)">2027 gatherings</h2>${upcoming}` : ""}
+      ${list.length ? `<h2 class="label" style="margin:4px 0 0;color:var(--muted)">2027 Gatherings</h2>${upcoming}` : ""}
       <p class="sub" style="font-size:13px;font-style:italic;margin:0">These are projected dates, pending the church calendar.</p>`;
   }
   // Profile: photos and preferences, saved to the couple's row in the Couples list.
@@ -464,19 +474,28 @@
     const c = profile();
     if (state.errors.couples) return card("Profile", empty(state.errors.couples));
     if (!c) return card("Profile", empty("Your couple profile hasn’t been set up yet. Ask a ministry administrator to add you to the Couples list."));
-    const sp = spouseOf(), mine = mySide() === "spouse2" ? "Spouse2Photo" : "Spouse1Photo";
-    const choice = (name, value, opts) => `<div class="grid2">${opts.map(o => `<label class="tog-check"><input type="radio" name="${name}" value="${o}" ${value === o ? "checked" : ""}><span>${o}</span></label>`).join("")}</div>`;
-    return `<section class="card" style="align-items:center;text-align:center;gap:10px">${face(myPhotoChain(), myName(), 112)}
-        <div style="font-size:22px;font-weight:700">${esc(myName())}</div><span class="sub">${esc(state.account?.username || "")}</span>
-        <label class="btn" for="pf-photo" style="cursor:pointer">Change Photo</label><input id="pf-photo" type="file" accept="image/*" data-field="${mine}" hidden></section>
-      <section class="card">${label("Your spouse")}<div style="display:flex;align-items:center;gap:12px">${face(sp?.photo || "", sp?.name, 56)}<div style="font-size:17px;font-weight:700">${esc(sp?.name || "Not added yet")}</div></div></section>
-      <section class="card" style="gap:10px">${label("Couples photo")}
-        ${c.couplePhoto ? `<img alt="Your couples photo" data-photo="${esc(c.couplePhoto)}" hidden style="width:100%;border-radius:12px;object-fit:cover;max-height:320px"><p class="sub">Loading photo…</p>` : empty("No couples photo yet.")}
-        <label class="btn ghost" for="pf-couple" style="cursor:pointer;align-self:flex-start">${c.couplePhoto ? "Change couples photo" : "Add couples photo"}</label><input id="pf-couple" type="file" accept="image/*" data-field="CouplePhoto" hidden></section>
-      <form data-form="profile" class="card" style="gap:12px">${label("About us")}
+    const two = mySide() === "spouse2", sp = spouseOf(), mine = two ? "Spouse2Photo" : "Spouse1Photo";
+    const myPhone = two ? c.phone2 : c.phone1, myBday = two ? c.birthday2 : c.birthday1;
+    const pills = (name, value, opts) => `<div class="pills">${opts.map(o => `<label class="pill-check"><input type="radio" name="${name}" value="${o}" ${value === o ? "checked" : ""}><span>${o}</span></label>`).join("")}</div>`;
+    const cover = c.couplePhoto ? `<img alt="Your couples photo" data-photo="${esc(c.couplePhoto)}" hidden class="cover"><div class="cover cover-empty">Loading photo…</div>`
+      : `<div class="cover cover-empty">Add a couples photo</div>`;
+    return `<section class="card profile-card">
+        <div class="cover-wrap">${cover}<label class="cover-btn" for="pf-couple">${c.couplePhoto ? "Change couples photo" : "Add couples photo"}</label><input id="pf-couple" type="file" accept="image/*" data-field="CouplePhoto" hidden></div>
+        <div class="pair">
+          <div class="person">${face(myPhotoChain(), myName(), 92)}<b>${esc(myName())}</b><span class="sub">You</span>
+            <label class="btn ghost small" for="pf-photo">Change Photo</label><input id="pf-photo" type="file" accept="image/*" data-field="${mine}" hidden></div>
+          <div class="person">${face(sp?.photo || "", sp?.name, 92)}<b>${esc(sp?.name || "Not added yet")}</b><span class="sub">Your spouse</span></div>
+        </div>
+        ${c.anniversary ? `<p class="sub" style="text-align:center;margin:0">💍 Married ${esc(longDate(c.anniversary))}</p>` : ""}
+      </section>
+      <form data-form="profile" class="card" style="gap:12px">${label("About me")}
+        <span class="sub" style="font-size:13px;word-break:break-all">${esc(state.account?.username || "")}</span>
+        <label for="pf-phone">Phone number</label><input id="pf-phone" type="tel" name="phone" maxlength="40" value="${esc(myPhone || "")}" placeholder="(555) 555-5555" autocomplete="tel">
+        <label for="pf-bday">Birthday</label><input id="pf-bday" type="date" name="birthday" value="${esc(myBday || "")}">
+        ${label("About us", ";margin-top:6px")}
         <label for="pf-anniv">Anniversary date</label><input id="pf-anniv" type="date" name="anniversary" value="${esc(c.anniversary || "")}">
-        <fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="padding:0;margin-bottom:6px;font-weight:600">Preferred contact method</legend>${choice("contact", c.contact, ["Text", "Call", "Email"])}</fieldset>
-        <fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="padding:0;margin-bottom:6px;font-weight:600">Preferred gathering</legend>${choice("gathering", c.gathering, ["In person", "Virtual"])}</fieldset>
+        <span style="font-weight:600">Preferred contact method</span>${pills("contact", c.contact, ["Text", "Call", "Email"])}
+        <span style="font-weight:600">Preferred gathering</span>${pills("gathering", c.gathering, ["In person", "Virtual"])}
         <button class="btn" type="submit">Save</button><p class="form-status sub" role="status" style="margin:0"></p></form>
       <button class="btn ghost" type="button" data-live="signout">Sign out</button>`;
   }
@@ -590,7 +609,7 @@
     const calDay = event.target.closest("[data-cal]");
     if (calDay) { state.calDay = Number(calDay.dataset.cal); render(); return; }
     const view = event.target.closest("[data-view]");
-    if (view && !state.loading) { state.view = view.dataset.view; state.message = ""; await loadView(); return; }
+    if (view && !state.loading) { if (view.dataset.view === "gather") state.gcal = null; state.view = view.dataset.view; state.message = ""; await loadView(); return; }
     const target = event.target.closest("[data-live]"); if (!target) return;
     try {
       if (target.dataset.live === "signin") await auth.loginRedirect({ scopes, redirectUri: C.redirectUri });
@@ -637,7 +656,10 @@
       if (form.dataset.form === "profile") {
         const anniv = String(values.get("anniversary") || ""), contact = String(values.get("contact") || ""), gathering = String(values.get("gathering") || "");
         if (anniv && !/^\d{4}-\d{2}-\d{2}$/.test(anniv)) throw new Error("Invalid date");
-        await updateCouple({ AnniversaryDate: anniv ? D.toDate(anniv) : null,
+        const bday = String(values.get("birthday") || ""), phone = String(values.get("phone") || "").trim().slice(0, 40);
+        if (bday && !/^\d{4}-\d{2}-\d{2}$/.test(bday)) throw new Error("Invalid date");
+        const n = mySide() === "spouse2" ? "2" : "1";
+        await updateCouple({ [`Spouse${n}Phone`]: phone || null, [`Spouse${n}Birthday`]: bday ? D.toDate(bday) : null, AnniversaryDate: anniv ? D.toDate(anniv) : null,
           PreferredContact: ["Text", "Call", "Email"].includes(contact) ? contact : null, PreferredGathering: ["In person", "Virtual"].includes(gathering) ? gathering : null });
       }
       if (form.dataset.form === "goal") {
