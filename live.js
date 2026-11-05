@@ -6,6 +6,72 @@
   const state = { shared: [], account: null, site: null, lists: {}, rows: {}, errors: {}, loading: false, message: "", view: "today", week: D.weekStart(D.ministryDay()) };
   let auth, controller = new AbortController();
   const root = document.getElementById("app");
+  const pushApi = "https://rci-push-astmacary-16343.azurewebsites.net/api/push/";
+  const pushApp = "rci-marriage";
+  const push = { key: null, enabled: false, busy: false, message: "" };
+  const pushSupported = () => window.isSecureContext && "Notification" in window && "PushManager" in window && "serviceWorker" in navigator;
+  async function pushRegistration() {
+    const scope = new URL("./", location.href).href;
+    const reg = await navigator.serviceWorker.getRegistration(scope);
+    return reg?.scope === scope ? reg : null;
+  }
+  async function pushRequest(path, data) {
+    const options = { cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15000) };
+    if (data) {
+      const { accessToken } = await auth.acquireTokenSilent({ scopes, account: state.account });
+      Object.assign(options, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ appId: pushApp, ...data }) });
+    }
+    const response = await fetch(pushApi + path, options);
+    if (!response.ok) throw new Error("Notification service unavailable");
+    return response.json();
+  }
+  async function checkPush() {
+    if (!pushSupported()) return;
+    try {
+      const reg = await pushRegistration();
+      const sub = await reg?.pushManager.getSubscription();
+      push.enabled = Boolean(sub && Notification.permission === "granted");
+      const { publicKey } = await pushRequest(`config?appId=${pushApp}`);
+      const base64 = publicKey.replace(/-/g, "+").replace(/_/g, "/");
+      const key = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+      if (key.length !== 65 || key[0] !== 4) throw new Error("Invalid push key");
+      push.key = key;
+    } catch { push.message = "Couldn’t connect to notifications. Try again."; }
+    render();
+  }
+  async function changePush(enable) {
+    if (push.busy || !pushSupported()) return;
+    push.busy = true; push.message = "";
+    try {
+      if (enable && await Notification.requestPermission() !== "granted") {
+        push.message = "Notifications are off. You can allow them in your device settings.";
+        return;
+      }
+      const reg = await pushRegistration();
+      let sub = await reg?.pushManager.getSubscription();
+      if (enable) {
+        if (!reg?.active || !push.key) throw new Error("Notifications are not ready");
+        sub ||= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: push.key });
+        try { await pushRequest("subscriptions", { action: "upsert", subscription: sub.toJSON() }); }
+        catch (error) { await sub.unsubscribe(); throw error; }
+      } else {
+        if (sub) {
+          try { await pushRequest("subscriptions", { action: "remove", endpoint: sub.endpoint }); } catch { /* Unsubscribing invalidates the device endpoint. */ }
+          if (!await sub.unsubscribe() && await reg.pushManager.getSubscription()) throw new Error("Unsubscribe failed");
+        }
+      }
+      push.enabled = enable;
+    } catch {
+      push.message = enable ? "Couldn’t enable notifications. Please try again." : "Couldn’t turn off notifications on this device. Please try again.";
+      if (!enable) throw new Error(push.message);
+    } finally { push.busy = false; render(); }
+  }
+  function notifications() {
+    if (!pushSupported()) return card("Notifications", empty("On iPhone or iPad, add RCI Marriage to your Home Screen and open it from its icon."));
+    const action = push.enabled ? ["push-off", "Turn off on this device"] : push.key ? ["push-on", "Enable notifications"] : ["push-check", "Check notification availability"];
+    return card("Notifications", empty("Get RCI Marriage reminders on this device.") +
+      (push.message ? `<p role="status">${esc(push.message)}</p>` : "") + (push.busy ? empty("Updating notifications…") : button(...action)));
+  }
   const siteUrl = `https://${C.siteHost}${C.sitePath}`;
   const day = D.ministryDay;
   const oid = () => state.account?.idTokenClaims?.oid || state.account?.localAccountId;
@@ -341,7 +407,7 @@
     const views = { today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
     root.innerHTML = header() + accountStrip() + `<main>
       ${!account ? card("Sign in", `<p class="sub">Sign in with your church Microsoft account to open your ministry data. The sign-in screen uses the shared RCI Productions registration.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}<a href="?demo=1">Explore the sample demo</a>`) :
-        `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.loading ? empty("Loading from SharePoint…") : !state.site ? empty("The connection is not ready. Refresh to retry.") : (views[state.view] || today)()}`}
+        `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.loading ? empty("Loading from SharePoint…") : !state.site ? empty("The connection is not ready. Refresh to retry.") : (views[state.view] || today)()}${state.site && state.view === "today" ? notifications() : ""}`}
       </main>${account && !wide ? tabBar() : ""}`;
   }
   window.renderLive = render;
@@ -352,7 +418,12 @@
     try {
       if (target.dataset.live === "signin") await auth.loginRedirect({ scopes, redirectUri: C.redirectUri });
       if (target.dataset.live === "refresh" && !state.loading) await loadView();
+      if (target.dataset.live === "push-check") await checkPush();
+      if (target.dataset.live === "push-on") await changePush(true);
+      if (target.dataset.live === "push-off") await changePush(false);
       if (target.dataset.live === "signout") {
+        if (push.busy) return;
+        await changePush(false);
         controller.abort(); controller = new AbortController(); const account = state.account;
         state.account = null; state.rows = {}; state.journal = null; state.shared = []; state.site = null; render();
         await auth.logoutRedirect({ account, postLogoutRedirectUri: C.redirectUri });
@@ -403,6 +474,6 @@
     auth = new msal.PublicClientApplication({ auth: { clientId: C.clientId, authority: `https://login.microsoftonline.com/${C.tenantId}`, redirectUri: C.redirectUri, navigateToLoginRequestUrl: false }, cache: { cacheLocation: "sessionStorage" } });
     await auth.initialize(); const result = await auth.handleRedirectPromise();
     state.account = result?.account || auth.getAllAccounts().find(account => account.tenantId === C.tenantId) || null;
-    if (state.account) { auth.setActiveAccount(state.account); await loadView(); }
+    if (state.account) { auth.setActiveAccount(state.account); await checkPush(); await loadView(); }
   } catch (error) { state.message = notice(error); render(); }
 })();
