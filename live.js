@@ -13,7 +13,7 @@
   const link = key => `${siteUrl}/Lists/${encodeURIComponent(C.lists[key])}/AllItems.aspx`;
   const button = (action, text) => `<button class="btn" type="button" data-live="${action}">${text}</button>`;
   const empty = text => `<p class="sub">${esc(text)}</p>`;
-  const card = (title, body) => `<section class="card"><h2 style="margin:0;font-size:21px">${esc(title)}</h2>${body}</section>`;
+  const card = (title, body) => `<section class="card"><h2 class="label" style="margin:0;color:var(--fig)">${esc(title)}</h2>${body}</section>`;
   function notice(error) {
     if (error.status === 403) return "SharePoint has not granted your account access to this area. Ask a ministry administrator to finish your couple setup.";
     if (error.status === 412) return "This entry changed in another session. Refresh before editing it again.";
@@ -55,10 +55,13 @@
       }
       const needed = state.view === "leaders" ? ["couples", "participation", "rsvps", "content"]
         : state.view === "checkin" ? ["checkins", "couples"]
-        : ["journal", "orchard"].includes(state.view) ? ["couples"]
-        : ["gather", "sealed"].includes(state.view) ? ["content", "pilotIntake"] : ["content", "answers", "couples"];
+        : state.view === "journal" ? ["couples", "answers"]
+        : state.view === "orchard" ? ["couples", "content", "pilotIntake"]
+        : state.view === "branch" ? ["couples"]
+        : state.view === "grow" ? ["content"]
+        : ["gather", "sealed"].includes(state.view) ? ["content", "pilotIntake"] : ["content", "answers", "couples", "pilotIntake"];
       await Promise.all(needed.map(load));
-      if (["today", "checkin", "journal", "orchard"].includes(state.view)) await loadJournal();
+      if (["today", "checkin", "journal", "orchard", "branch"].includes(state.view)) await loadJournal();
     } catch (error) { state.message = notice(error); }
     state.loading = false; render();
   }
@@ -108,26 +111,110 @@
       return `<article style="border-top:1px solid var(--line);padding-top:12px"><b>${esc(data.date || item.fields.Title)}</b><p style="white-space:pre-wrap">${esc(data.answer || data.need || "Check-in saved")}</p></article>`;
     }).join("") || empty("No saved responses yet.");
   }
+  const FRUIT = [["January","The Vine","John 15:5"],["February","Love","1 Corinthians 13:4–7"],["March","Joy","Philippians 4:4"],["April","Peace","Colossians 3:15"],
+    ["May","Patience","Ephesians 4:2"],["June","Kindness","Ephesians 4:32"],["July","Goodness","Galatians 6:10"],["August","Faithfulness","Proverbs 3:3"],
+    ["September","Gentleness","Proverbs 15:1"],["October","Self-control","Proverbs 25:28"],["November","Gratitude","1 Thessalonians 5:18"],["December","Harvest","John 15:8"]];
+  const FRUIT_COLOR = ["#2F5D3F","#B23A48","#D99A1E","#3E7CB1","#C4955F","#C77D3A","#5B7F3A","#6B4F9E","#4F8A8B","#8A5A44","#B8860B","#C4955F"];
+  const STEPS = ["Plant","Water","Grow","Harvest"];
+  const parts = () => { const [y,m,d] = day().split("-").map(Number); return { y, m, d, date: new Date(Date.UTC(y, m - 1, d)) }; };
+  const fmt = (opts) => new Intl.DateTimeFormat("en-US", { timeZone: "UTC", ...opts }).format(parts().date);
+  const weekIndex = () => Math.min(3, Math.floor((parts().d - 1) / 7));
+  const firstName = () => esc(String(state.account?.name || "").split(/[\s,]+/).filter(Boolean)[0] || "");
+  const label = (text, extra = "") => `<span class="label" style="color:var(--fig)${extra}">${text}</span>`;
+  const panel = (lbl, body, extra = "") => `<section class="card"${extra}>${lbl ? label(lbl) : ""}${body}</section>`;
+  const tile = (view, lbl, big, small) => `<button type="button" class="card" data-view="${view}" style="gap:4px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)"><span style="font-size:12px;font-weight:700;color:var(--fig)">${lbl}</span><span style="font-size:16px;font-weight:700">${big}</span><span class="sub" style="font-size:13px">${small}</span></button>`;
+  const TAB_OF = { today: "today", checkin: "us", journal: "us", orchard: "us", grow: "grow", branch: "branch", gather: "gather" };
+  const TAB_ICON = {
+    today: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    us: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="13" r="5"/><circle cx="15" cy="13" r="5"/></svg>',
+    grow: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9M12 12c0-4 3-7 8-7 0 4-3 7-8 7zM12 14c0-3-2.5-5.5-7-5.5 0 3 2.5 5.5 7 5.5z"/></svg>',
+    branch: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 2 6 5.5"/></svg>',
+    gather: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'
+  };
+  function tabBar() {
+    const cur = TAB_OF[state.view];
+    const item = (id, view, text) => `<button type="button" data-view="${view}" ${cur === id ? 'aria-current="page"' : ""} ${state.loading ? "disabled" : ""}>${TAB_ICON[id]}${text}</button>`;
+    return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Today")}${item("us","checkin","Us")}${item("grow","grow","Grow")}${item("branch","branch","Branch")}${item("gather","gather","Gather")}</div></nav>`;
+  }
+  function usSeg(cur) {
+    const a = (view, text) => `<button type="button" data-view="${view}" ${cur === view ? 'aria-current="page"' : ""}>${text}</button>`;
+    return `<div class="seg seg3">${a("checkin","Check-in")}${a("orchard","Our Orchard")}${a("journal","Journal")}</div>`;
+  }
+  function header() {
+    const v = state.view, f = FRUIT[parts().m - 1];
+    const H = (eyebrow, title, top = "") => top ? `<header class="head">${top}<h1 style="margin-top:6px">${title}</h1>${eyebrow ? `<div class="eyebrow" style="font-weight:400">${eyebrow}</div>` : ""}</header>` : `<header class="head">${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ""}<h1>${title}</h1></header>`;
+    if (!state.account) return H("Fruit of Our Union · 2027", "Welcome");
+    if (v === "today") { const n = firstName(); return H(`${fmt({ weekday: "long", month: "long", day: "numeric" })} · Week ${weekIndex() + 1} of 4`, `Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}${n ? ", " + n : ""}`); }
+    if (v === "checkin") return H("Shared with your spouse", "Sunday check-in", usSeg("checkin"));
+    if (v === "orchard") return H("Fills in month by month. Revealed in full at the Harvest Celebration.", "Our Orchard", usSeg("orchard"));
+    if (v === "journal") return H("Visible to both of you", "Our journal", usSeg("journal"));
+    if (v === "grow") return H(`${f[0]} · ${f[2]}`, `${f[1]}, week by week`);
+    if (v === "branch") return H("Your Branch", esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
+    if (v === "gather") return H("RCI Marriage Ministry · 2027", "Gather");
+    if (v === "leaders") return H("Leader dashboard", "How the ministry is growing");
+    return H("", "RCI Marriage");
+  }
+  function accountStrip() {
+    if (!state.account) return "";
+    const leader = state.view === "leaders";
+    return `<div class="demo live-strip"><span>${esc(state.account.name || "Signed in")}</span><span style="display:flex;gap:6px;flex-wrap:wrap">
+      <button type="button" data-view="${leader ? "today" : "leaders"}" ${state.loading ? "disabled" : ""}>${leader ? "Couple view" : "Leader view"}</button>
+      <button type="button" data-live="refresh">Refresh</button><button type="button" data-live="signout">Sign out</button></span></div>`;
+  }
   function today() {
     const content = (state.rows.content || []).map(item => ({ item, data: D.read("content", item) }));
     const prompt = content.find(({data}) => data.kind === "prompt" && data.date === day());
-    const body = state.errors.content ? empty(state.errors.content) : !prompt ? empty("No daily prompt has been published for today.")
-      : prompt.data.type === "Check-in" ? `<p class="big">It’s Sunday: no prompt today.</p><p class="sub">${esc(prompt.data.text)}. Do your check-in instead.</p><button class="btn" type="button" data-view="checkin">Open the Sunday check-in</button>`
-      : `${prompt.data.type ? `<p class="label" style="color:var(--fig);margin:0">${esc(prompt.data.type)}${prompt.data.week ? " · " + esc(prompt.data.week) : ""}</p>` : ""}<p class="big">${esc(prompt.data.text)}</p><form data-form="answer"><input type="hidden" name="promptId" value="${esc(prompt.item.id)}"><label for="live-answer">Your answer</label><textarea id="live-answer" name="answer" maxlength="12000" required rows="5"></textarea><p class="sub">Only you can see your answer until your spouse answers too. Then you’ll both see the two answers side by side.</p><button class="btn" type="submit">Save my answer</button><p role="status" class="form-status"></p></form>`;
+    const f = FRUIT[parts().m - 1], w = weekIndex();
+    const hero = `<section class="month" aria-label="This month"><div class="row"><span class="label">${esc(f[0])} fruit</span><span style="font-size:12px;color:#C9D2DD">Fruit of Our Union</span></div>
+      <div class="name">${esc(f[1])}</div><div style="font-size:15px;line-height:1.4;color:#C9D2DD">${esc(f[2])}</div>
+      <div class="rhythm">${STEPS.map((step, i) => `<div class="${i < w ? "done" : i === w ? "now" : ""}">${step}${i < w ? " ✓" : ""}</div>`).join("")}</div></section>`;
     const revealed = state.shared.find(entry => entry.kind === "reveal" && entry.date === day());
     const answered = own("answers").some(item => D.read("answers", item).date === day());
-    const reveal = revealed ? pair(revealed) : answered ? empty("Your answer is saved. When your spouse answers today’s prompt, both answers will appear here. Refresh to check.") : empty("Answer today’s prompt and it will be revealed here once you’ve both answered.");
-    return card("Today’s prompt", body) + card("Revealed together", reveal) + card("Earlier reveals", sharedList("reveal", 7, "Reveals will collect here as you both answer prompts.")) + card("My saved answers", responseList("answers")) + card("Grow", state.errors.content ? empty(state.errors.content) :
-      content.filter(({data}) => ["video", "devotional", "challenge"].includes(data.kind)).map(({item,data}) =>
-        `<article><h3>${esc(item.fields.Title)}</h3><p style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer">Open resource</a>` : ""}</article>`).join("") || empty("Ministry resources will appear here when published."));
+    let promptCard;
+    if (state.errors.content) promptCard = panel("Reveal Together", empty(state.errors.content));
+    else if (!prompt) promptCard = panel("Reveal Together", `<div class="big">No prompt has been published for today.</div><p class="sub">Check back tomorrow, or open your journal.</p>`);
+    else if (prompt.data.type === "Check-in") promptCard = panel("Sunday · Check-in", `<div class="big">It’s Sunday: no prompt today.</div><p class="sub">${esc(prompt.data.text)}. Do your check-in instead.</p><button class="btn" type="button" data-view="checkin">Open the Sunday check-in</button>`);
+    else promptCard = `<section class="card"><div class="row">${label("Reveal Together" + (prompt.data.type ? " · " + esc(prompt.data.type) : ""))}<span class="pill" style="background:var(--soft);color:var(--ink)">${revealed ? "Both answered" : answered ? "You answered" : "Waiting on you"}</span></div>
+      <div class="big">${esc(prompt.data.text)}</div>
+      ${revealed ? pair(revealed) : answered ? `<div class="lock">Your answer is locked in. Your spouse’s answer unlocks once they reply. Refresh to check.</div>`
+        : `<form data-form="answer" style="display:flex;flex-direction:column;gap:10px"><input type="hidden" name="promptId" value="${esc(prompt.item.id)}"><label for="live-answer" class="sub" style="font-size:13px;font-weight:400">Only you can see this until your spouse answers too.</label><textarea id="live-answer" name="answer" maxlength="12000" required rows="4" placeholder="Type your answer…"></textarea><button class="btn" type="submit">Answer privately</button><p role="status" class="form-status sub" style="margin:0"></p></form>`}
+      ${revealed ? `<p class="sub">Take 5 minutes to talk about what you each wrote. No fixing, just listening.</p>` : ""}</section>`;
+    const challenge = content.find(({data}) => data.kind === "challenge");
+    const challengeCard = challenge ? `<button type="button" class="card" data-view="grow" style="text-align:left;cursor:pointer;font:inherit;color:var(--ink)">${label("This week’s challenge · " + STEPS[w])}<span style="font-size:16px;font-weight:700">${esc(challenge.item.fields.Title)}</span><span class="sub">${esc(challenge.data.text)}</span></button>` : "";
+    if (state.errors.answers) promptCard = panel("Reveal Together", empty(state.errors.answers));
+    return hero + promptCard + challengeCard + `<div class="grid2">${tile("checkin", "Sunday check-in", "This week", "2 minutes")}${tile("gather", "Gatherings", "Retreat &amp; Harvest", "RSVP")}</div>`
+      + `<button type="button" class="card" data-view="journal" style="flex-direction:row;justify-content:space-between;align-items:center;cursor:pointer;font:inherit;color:var(--ink);text-align:left"><span><span class="label" style="color:var(--muted)">Earlier reveals</span><br><span style="font-weight:600">Our journal</span></span><span aria-hidden="true" style="color:var(--fig)">›</span></button>`;
+  }
+  function grow() {
+    if (state.errors.content) return panel("Grow", empty(state.errors.content));
+    const content = (state.rows.content || []).map(item => ({ item, data: D.read("content", item) }));
+    const order = ["video", "devotional", "challenge"];
+    const items = content.filter(({data}) => order.includes(data.kind)).sort((a, b) => order.indexOf(a.data.kind) - order.indexOf(b.data.kind));
+    const w = weekIndex();
+    const kindLabel = { video: "Plant · Leader video", devotional: "Plant · Devotional", challenge: "Water · Couple challenge" };
+    return (items.map(({item, data}) => `<section class="card"${data.kind === "challenge" && w === 1 ? ' style="border:2px solid var(--brand-gold)"' : ""}>${label(kindLabel[data.kind])}
+        ${data.kind === "video" ? `<div style="display:flex;gap:12px;align-items:center"><div class="video"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#C4955F"><path d="M8 5v14l11-7z"/></svg></div><div style="font-weight:700">${esc(item.fields.Title)}</div></div>` : `<div style="font-size:16px;font-weight:700">${esc(item.fields.Title)}</div>`}
+        <p class="sub" style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer" style="font-weight:700">Open ${data.kind === "video" ? "video" : "resource"} ›</a>` : ""}</section>`).join("")
+      || panel("Week 1 · Plant", `<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`))
+      + panel("Week 3 · Grow", `<div style="font-size:16px;font-weight:700">Share and pray with your Branch</div><button type="button" data-view="branch" class="linkbtn">Open your Branch ›</button>`)
+      + panel("Week 4 · Harvest", `<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="orchard" class="linkbtn">See Our Orchard ›</button>`);
+  }
+  function branch() {
+    const couple = profile();
+    const issue = state.errors.couples;
+    if (issue) return panel("Your Branch", empty(issue));
+    return panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div><p class="sub">Your Branch is 4–5 couples with a mentor couple. You meet in Grow week (week 3) to share and pray together.</p>`)
+      + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc(couple?.mentor || "To be announced")}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p><button class="btn" type="button" data-view="checkin">Open the Sunday check-in</button>`);
   }
   function checkin() {
-    return card("Sunday check-in", `<form data-form="checkin" style="display:grid;gap:12px"><p class="sub">Your check-in is shared with your spouse when you save it. If you ask for your mentors, they get a short note to reach out. They don’t see your answers.</p>
-      ${["Connected", "Heard", "Spiritually together", "Having fun"].map((name,i) => `<label>${name}<select name="rating${i}" required style="display:block;font:inherit;padding:10px;width:100%"><option value="">Choose 1–5</option>${[1,2,3,4,5].map(n=>`<option>${n}</option>`).join("")}</select></label>`).join("")}
-      <label for="live-need">One thing I need this week</label><textarea id="live-need" name="need" maxlength="6000" rows="3"></textarea>
-      <label for="live-saw">Where I saw growth in you</label><textarea id="live-saw" name="saw" maxlength="6000" rows="3"></textarea>
-      <label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" name="mentor" value="yes" style="width:22px;height:22px"> We’d like our mentor couple to reach out</label><p class="sub" style="margin-top:-6px">Optional. Only your mentor couple gets a heads-up, with no details.</p>
-      <button class="btn" type="submit">Save my check-in</button><p role="status" class="form-status"></p></form>`) + card("Our check-ins", sharedList("check-in", 8, "Check-ins you and your spouse save will appear here.")) + card("My saved check-ins", responseList("checkins"));
+    return `<form data-form="checkin" style="display:flex;flex-direction:column;gap:12px">
+      <section class="card" style="gap:14px"><p class="sub" style="font-size:13px">This week, how much did you feel… (1 = not at all, 5 = very)</p>
+      ${["Connected", "Heard", "Spiritually together", "Having fun"].map((name, i) => `<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="font-size:15px;font-weight:600;padding:0;margin-bottom:6px">${name}</legend><div class="rates">${[1,2,3,4,5].map(n => `<label class="rate"><input type="radio" name="rating${i}" value="${n}" required><span>${n}</span></label>`).join("")}</div></fieldset>`).join("")}</section>
+      <section class="card"><label for="live-need">One thing I need this week</label><input type="text" id="live-need" name="need" maxlength="6000" placeholder="e.g. a quiet evening, just us">
+      <label for="live-saw" style="margin-top:6px">Where I saw God at work in you</label><input type="text" id="live-saw" name="saw" maxlength="6000" placeholder="e.g. with the kids at bedtime"></section>
+      <section class="card"><label class="tog-check"><input type="checkbox" name="mentor" value="yes"><span>We’d like our mentor couple to reach out</span></label><p class="sub" style="font-size:13px">Optional. Only your mentor couple gets a heads-up, with no details.</p></section>
+      <button class="btn" type="submit">Send check-in</button><p role="status" class="form-status sub" style="margin:0"></p></form>`
+      + panel("Our check-ins", sharedList("check-in", 8, "Check-ins you and your spouse save will appear here."));
   }
   function journal() {
     if (state.errors.couples || state.errors.reveals) return card("Our journal", empty(state.errors.reveals || state.errors.couples));
@@ -136,18 +223,21 @@
     const entries = Array.isArray(savedEntries) ? savedEntries : [];
     return card("Our shared journal", `<p class="sub">Notes added here are visible immediately to both spouses. Site owners and tenant administrators retain administrative access.</p>
       ${entries.map(entry=>`<article style="border-top:1px solid var(--line)"><p class="sub">${esc(entry.date)}</p><p style="white-space:pre-wrap">${esc(entry.text)}</p></article>`).join("") || empty("No shared notes yet.")}
-      <form data-form="journal"><label for="journal-note">Add a note together</label><textarea id="journal-note" name="text" maxlength="6000" rows="4" required></textarea><button class="btn" type="submit">Save to our journal</button><p role="status" class="form-status"></p></form>`) + card("All our reveals", sharedList("reveal", 400, "No reveals yet."));
+      <form data-form="journal"><label for="journal-note">Add a note together</label><textarea id="journal-note" name="text" maxlength="6000" rows="4" required></textarea><button class="btn" type="submit">Save to our journal</button><p role="status" class="form-status"></p></form>`) + card("All our reveals", sharedList("reveal", 400, "No reveals yet.")) + card("My saved answers", responseList("answers"));
   }
   function pilotJournal() {
     const issue = state.errors.couples || state.errors.reveals;
     if (!state.journal) return card("Our Orchard", empty(issue || "Ask a ministry administrator to link your couple profile."));
     const data = D.parse(state.journal);
     const months = Array.isArray(data.pilotMonths) ? data.pilotMonths : [];
-    const orchard = Array.from({ length: 12 }, (_, index) => {
-      const month = new Intl.DateTimeFormat("en", { month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2027, index)));
+    const curMonth = parts().m;
+    const orchard = `<section class="card" style="padding:14px"><div class="orchard">${FRUIT.map((f, index) => {
       const key = "2027-" + String(index + 1).padStart(2, "0");
-      return '<li>' + month + ' · ' + (months.includes(key) ? "Gathered ✓" : "Awaiting participation") + '</li>';
-    }).join("");
+      const st = months.includes(key) ? "done" : parts().y === 2027 && index + 1 === curMonth ? "now" : "later";
+      const fill = st === "done" ? FRUIT_COLOR[index] : st === "now" ? "rgba(196,149,95,.35)" : "none";
+      const stroke = st === "done" ? FRUIT_COLOR[index] : st === "now" ? "#C4955F" : "#9AA3AE";
+      return `<div class="orchard-cell${st === "now" ? " now" : ""}" role="img" aria-label="${f[0]}, ${f[1]}, ${st === "done" ? "gathered" : st === "now" ? "in progress" : "not yet"}"><svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="23" r="12" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-dasharray="${st === "done" ? "0" : "3 3"}"/><path d="M20 11c0-4.5 3.5-7 8-7 0 4.5-3.5 7-8 7z" fill="${st === "later" ? "#9AA3AE" : "#C4955F"}"/></svg><small>${f[0].slice(0,3)}</small><b>${f[1]}</b></div>`;
+    }).join("")}</div><p class="sub" style="font-size:13px">A month fills in after either of you answers a prompt or checks in.</p></section>`;
     const goals = D.goals.map(goal => {
       const saved = data.unionGoals?.[goal.key] || "";
       if (day() < goal.date) return card(goal.label, empty("Opens " + goal.date));
@@ -158,8 +248,8 @@
     }).join("");
     const released = Array.isArray(data.releasedNotes) ? data.releasedNotes : [];
     const notes = released.map(note => `<article><h3>${esc(note.author)} · ${esc(note.month)}</h3><p style="white-space:pre-wrap">${esc(note.text)}</p></article>`).join("");
-    return card("Our Orchard", `<p class="sub">A month fills in after either spouse answers a prompt or checks in.</p><ul>${orchard}</ul>`)
-      + card("Union Goals", empty("Your three goals for 2027 are shared with your spouse.")) + goals
+    return orchard
+      + card("Our Union Goals for 2027", empty("Your three goals for 2027 are shared with your spouse.")) + goals + sealed()
       + card("Released notes", notes || empty("Your notes will appear here after the ministry releases them."));
   }
   function sealed() {
@@ -186,12 +276,10 @@
       if (!details) return card(title, empty("Details and RSVPs will open when the ministry publishes this event."));
       const saved = own("pilotIntake").find(item => item.fields?.Title === "rsvp:2027:" + event);
       const selection = saved ? D.parse(saved).response : "";
-      return card(title, `<p class="sub" style="white-space:pre-wrap">${esc(details.text)}</p>
+      return panel(event === "retreat" ? "Marriage Retreat 2027" : "December · Year-end", `<div style="font-size:17px;font-weight:700">${title}</div><p class="sub" style="white-space:pre-wrap">${esc(details.text)}</p>
         <form data-form="rsvp"><input type="hidden" name="event" value="${event}">
-        <label for="rsvp-${event}">Your RSVP</label><select id="rsvp-${event}" name="response" required>
-          <option value="">Choose a response</option>${[["yes","Attending"],["no","Unable to attend"]].map(([value,label]) =>
-            `<option value="${value}" ${selection === value ? "selected" : ""}>${label}</option>`).join("")}
-        </select><button class="btn" type="submit">Save RSVP</button><p class="form-status" role="status"></p></form>`);
+        <fieldset style="border:0;margin:0;padding:0"><legend class="sub" style="padding:0;margin-bottom:6px">Your RSVP</legend><div class="grid2">${[["yes","We’re going"],["no","Can’t make it"]].map(([value,text]) =>
+            `<label class="tog-check"><input type="radio" name="response" value="${value}" required ${selection === value ? "checked" : ""}><span>${text}</span></label>`).join("")}</div></fieldset><button class="btn" type="submit" style="margin-top:10px">Save RSVP</button><p class="form-status sub" role="status"></p></form>`);
     }).join("");
   }
   async function updateJournal(changes) {
@@ -247,13 +335,14 @@
         `<a href="${esc(link(key))}" target="_blank" rel="noopener noreferrer">Open ${esc(C.lists[key])} in SharePoint</a>`)).join("");
   }
   function render() {
-    const account = state.account;
-    root.className = "app";
-    root.innerHTML = `<header class="head"><div class="eyebrow">Fruit of Our Union · Live</div><h1>RCI Marriage</h1>${account ? `<p class="sub">${esc(account.name || "Signed in")}</p>` : ""}</header><main>
-      ${!account ? card("Welcome", `<p class="sub">Sign in with your church Microsoft account to open your ministry data. The sign-in screen uses the shared RCI Productions registration.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}<a href="?demo=1">Explore the sample demo</a>`) :
-        `<div style="display:flex;gap:8px;flex-wrap:wrap">${[["today","Today"],["checkin","Check-in"],["journal","Our journal"],["orchard","Our Orchard"],["sealed","Sealed note"],["gather","Gather"],["leaders","Leaders"]].map(([key,label]) => `<button class="btn ghost" type="button" data-view="${key}" ${state.loading ? "disabled" : ""} ${key===state.view?'aria-current="page"':""}>${label}</button>`).join("")}</div><div style="display:flex;gap:8px">${button("refresh","Refresh")}${button("signout","Sign out")}</div>
-        ${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}${state.loading ? empty("Loading from SharePoint…") : !state.site ? empty("The connection is not ready. Refresh to retry.") : ({today,checkin,journal,orchard:pilotJournal,sealed,gather,leaders}[state.view])()}`}
-      </main>`;
+    const account = state.account, wide = state.view === "leaders" && !!account;
+    root.className = "app" + (wide ? " wide" : "");
+    const bar = document.getElementById("brandbar"); if (bar && bar !== root) bar.className = "brandbar" + (wide ? " wide" : "");
+    const views = { today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
+    root.innerHTML = header() + accountStrip() + `<main>
+      ${!account ? card("Sign in", `<p class="sub">Sign in with your church Microsoft account to open your ministry data. The sign-in screen uses the shared RCI Productions registration.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}<a href="?demo=1">Explore the sample demo</a>`) :
+        `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.loading ? empty("Loading from SharePoint…") : !state.site ? empty("The connection is not ready. Refresh to retry.") : (views[state.view] || today)()}`}
+      </main>${account && !wide ? tabBar() : ""}`;
   }
   window.renderLive = render;
   document.addEventListener("click", async event => {
