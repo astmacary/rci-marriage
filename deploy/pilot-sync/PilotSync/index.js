@@ -4,7 +4,7 @@ module.exports = async function (context) {
   try {
     await run(message => context.log(message));
   } catch (error) {
-    context.error("Pilot sync failed:", error.message);
+    context.log.error("Pilot sync failed:", error.message);
     throw new Error("Pilot sync failed. Check the invocation log.");
   }
 };
