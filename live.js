@@ -189,7 +189,7 @@
   const label = (text, extra = "") => `<span class="label" style="color:var(--fig)${extra}">${text}</span>`;
   const panel = (lbl, body, extra = "") => `<section class="card"${extra}>${lbl ? label(lbl) : ""}${body}</section>`;
   const tile = (view, lbl, big, small) => `<button type="button" class="card" data-view="${view}" style="gap:4px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)"><span style="font-size:12px;font-weight:700;color:var(--fig)">${lbl}</span><span style="font-size:16px;font-weight:700">${big}</span><span class="sub" style="font-size:13px">${small}</span></button>`;
-  const TAB_OF = { today: "today", checkin: "us", journal: "us", orchard: "us", grow: "grow", branch: "branch", gather: "gather" };
+  const TAB_OF = { calendar: "today", today: "today", checkin: "us", journal: "us", orchard: "us", grow: "grow", branch: "branch", gather: "gather" };
   const TAB_ICON = {
     today: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
     us: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="13" r="5"/><circle cx="15" cy="13" r="5"/></svg>',
@@ -200,7 +200,7 @@
   function tabBar() {
     const cur = TAB_OF[state.view];
     const item = (id, view, text) => `<button type="button" data-view="${view}" ${cur === id ? 'aria-current="page"' : ""} ${state.loading ? "disabled" : ""}>${TAB_ICON[id]}${text}</button>`;
-    return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Today")}${item("us","checkin","Us")}${item("grow","grow","Grow")}${item("branch","branch","Branch")}${item("gather","gather","Gather")}</div></nav>`;
+    return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Today")}${item("us","checkin","Check In")}${item("grow","grow","Grow")}${item("branch","branch","Branch")}${item("gather","gather","Gather")}</div></nav>`;
   }
   function usSeg(cur) {
     const a = (view, text) => `<button type="button" data-view="${view}" ${cur === view ? 'aria-current="page"' : ""}>${text}</button>`;
@@ -211,6 +211,7 @@
     const H = (eyebrow, title, top = "") => top ? `<header class="head">${top}<h1 style="margin-top:6px">${title}</h1>${eyebrow ? `<div class="eyebrow" style="font-weight:400">${eyebrow}</div>` : ""}</header>` : `<header class="head">${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ""}<h1>${title}</h1></header>`;
     if (!state.account) return H("Fruit of Our Union · 2027", "Welcome");
     if (v === "today") { const n = firstName(); return H(`${fmt({ weekday: "long", month: "long", day: "numeric" })} · Week ${weekIndex() + 1} of 4`, `Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}${n ? ", " + n : ""}`); }
+    if (v === "calendar") { const p = Object.values(monthPrompts()), c = p.filter(x => x.type === "Check-in").length; return H(`${f[2]} · ${p.length - c} prompts · ${c} check-ins`, `${f[0]} · ${f[1]}`); }
     if (v === "checkin") return H("Shared with your spouse", "Sunday check-in", usSeg("checkin"));
     if (v === "orchard") return H("Fills in month by month. Revealed in full at the Harvest Celebration.", "Our Orchard", usSeg("orchard"));
     if (v === "journal") return H("Visible to both of you", "Our journal", usSeg("journal"));
@@ -249,7 +250,44 @@
     const challengeCard = challenge ? `<button type="button" class="card" data-view="grow" style="text-align:left;cursor:pointer;font:inherit;color:var(--ink)">${label("This week’s challenge · " + STEPS[w])}<span style="font-size:16px;font-weight:700">${esc(challenge.item.fields.Title)}</span><span class="sub">${esc(challenge.data.text)}</span></button>` : "";
     if (state.errors.answers) promptCard = panel("Reveal Together", empty(state.errors.answers));
     return hero + promptCard + challengeCard + `<div class="grid2">${tile("checkin", "Sunday check-in", "This week", "2 minutes")}${tile("gather", "Gatherings", "Retreat &amp; Harvest", "RSVP")}</div>`
-      + `<button type="button" class="card" data-view="journal" style="flex-direction:row;justify-content:space-between;align-items:center;cursor:pointer;font:inherit;color:var(--ink);text-align:left"><span><span class="label" style="color:var(--muted)">Earlier reveals</span><br><span style="font-weight:600">Our journal</span></span><span aria-hidden="true" style="color:var(--fig)">›</span></button>`;
+      + `<button type="button" class="card" data-view="journal" style="flex-direction:row;justify-content:space-between;align-items:center;cursor:pointer;font:inherit;color:var(--ink);text-align:left"><span><span class="label" style="color:var(--muted)">Earlier reveals</span><br><span style="font-weight:600">Our journal</span></span><span aria-hidden="true" style="color:var(--fig)">›</span></button>`
+      + `<button type="button" class="card" data-view="calendar" style="flex-direction:row;justify-content:space-between;align-items:center;cursor:pointer;font:inherit;color:var(--ink);text-align:left"><span><span class="label" style="color:var(--muted)">Preview</span><br><span style="font-weight:600">${FRUIT[parts().m - 1][0]} prompts · ${FRUIT[parts().m - 1][1]}</span></span><span aria-hidden="true" style="color:var(--fig)">›</span></button>`;
+  }
+  // Month calendar of published prompts, the same as the demo's January preview.
+  const CAL_TYPES = { Reflect:["#DCE6F2","#1F4A70"], Faith:["#E3ECE2","#1F4A2E"], Fun:["#FDF1D8","#6B4800"],
+    Appreciate:["#F4ECDF","#7A5526"], Plan:["#E4E1EE","#3D3366"], "Check-in":["#C4955F","#0A2440"] };
+  const calPill = t => CAL_TYPES[t] ? `<span class="pill" style="background:${CAL_TYPES[t][0]};color:${CAL_TYPES[t][1]}">${esc(t)}</span>` : "";
+  function monthPrompts() {
+    const { y, m } = parts(), prefix = `${y}-${String(m).padStart(2, "0")}-`;
+    const byDay = {};
+    for (const item of state.rows.content || []) {
+      const data = D.read("content", item);
+      if (data.kind === "prompt" && String(data.date || "").startsWith(prefix)) byDay[Number(data.date.slice(8, 10))] = data;
+    }
+    return byDay;
+  }
+  function calendar() {
+    if (state.errors.content) return panel("Prompts", empty(state.errors.content));
+    const { y, m, d: todayD } = parts(), byDay = monthPrompts();
+    const days = new Date(Date.UTC(y, m, 0)).getUTCDate(), lead = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+    const sel = state.calDay && state.calDay <= days ? state.calDay : todayD;
+    const p = byDay[sel];
+    const cells = Array.from({ length: days }, (_, i) => {
+      const n = i + 1, t = byDay[n]?.type, c = CAL_TYPES[t] || ["var(--soft)", "var(--muted)"];
+      return `<button type="button" data-cal="${n}" aria-pressed="${n === sel}" aria-label="${esc(FRUIT[m - 1][0])} ${n}${t ? ", " + esc(t) : ", no prompt"}" style="background:${c[0]};color:${c[1]}">${n}</button>`;
+    }).join("");
+    const dow = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" }).format(new Date(Date.UTC(y, m - 1, sel)));
+    const wk = sel <= 7 ? "Week 1 · Plant" : sel <= 14 ? "Week 2 · Water" : sel <= 21 ? "Week 3 · Grow" : "Week 4 · Harvest";
+    let note = "";
+    if (p) {
+      if (/union goal/i.test(p.text)) note = "Saved to Our Orchard as one of your Union Goals.";
+      if (p.type === "Check-in") note = "No prompt on Sundays. Do the check-in instead.";
+    }
+    return `<div class="chips">${Object.keys(CAL_TYPES).map(calPill).join("")}</div>
+      <section class="card" style="padding:12px"><div class="cal">${["S","M","T","W","T","F","S"].map(x => `<div class="dow">${x}</div>`).join("")}${"<div></div>".repeat(lead)}${cells}</div></section>
+      <section class="card"><div class="row"><span class="label" style="color:var(--muted);letter-spacing:.06em">${dow}, ${esc(FRUIT[m - 1][0].slice(0, 3))} ${sel} · ${wk}</span>${p ? calPill(p.type) : ""}</div>
+        <div style="font-size:16px;font-weight:600;line-height:1.4">${p ? esc(p.text) : "No prompt published for this day."}</div>
+        ${note ? `<div style="font-size:13px;line-height:1.4;color:var(--fig);font-weight:600">${note}</div>` : ""}</section>`;
   }
   function grow() {
     if (state.errors.content) return panel("Grow", empty(state.errors.content));
@@ -404,14 +442,16 @@
     const account = state.account, wide = state.view === "leaders" && !!account;
     root.className = "app" + (wide ? " wide" : "");
     const bar = document.getElementById("brandbar"); if (bar && bar !== root) bar.className = "brandbar" + (wide ? " wide" : "");
-    const views = { today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
+    const views = { calendar, today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
     root.innerHTML = header() + accountStrip() + `<main>
       ${!account ? card("Sign in", `<p class="sub">Sign in with your church Microsoft account to open your ministry data. The sign-in screen uses the shared RCI Productions registration.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}<a href="?demo=1">Explore the sample demo</a>`) :
-        `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.loading ? empty("Loading from SharePoint…") : !state.site ? empty("The connection is not ready. Refresh to retry.") : (views[state.view] || today)()}${state.site && state.view === "today" ? notifications() : ""}`}
+        `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.loading ? "" : !state.site ? empty("The connection is not ready. Refresh to retry.") : (views[state.view] || today)()}${state.site && state.view === "today" ? notifications() : ""}`}
       </main>${account && !wide ? tabBar() : ""}`;
   }
   window.renderLive = render;
   document.addEventListener("click", async event => {
+    const calDay = event.target.closest("[data-cal]");
+    if (calDay) { state.calDay = Number(calDay.dataset.cal); render(); return; }
     const view = event.target.closest("[data-view]");
     if (view && !state.loading) { state.view = view.dataset.view; state.message = ""; await loadView(); return; }
     const target = event.target.closest("[data-live]"); if (!target) return;
