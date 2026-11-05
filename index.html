@@ -126,6 +126,7 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 [hidden]{display:none!important}
 .theme-toggle svg{width:15px;height:15px}
 nav.tabs button svg{width:28px;height:28px}
+nav.tabs button[data-view="today"] svg,nav.tabs button[data-view="checkin"] svg{width:33px;height:33px;margin:-2px 0 -3px}
 .avatars.big{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:14px 8px}
 .avatars.big .av-btn{width:auto;font-size:12.5px;font-weight:600}
 .avatars.big .av-btn span{width:72px;height:72px;font-size:18px}
@@ -138,8 +139,8 @@ nav.tabs button svg{width:28px;height:28px}
 #ptr{position:fixed;top:0;left:0;right:0;height:0;overflow:hidden;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:var(--surface);color:var(--muted);font-weight:600;font-size:13px;border-bottom:1px solid var(--line);transition:height .12s ease;padding-top:env(safe-area-inset-top,0px)}
 #ptr span{padding:0 0 12px}
 #ptr.ready{color:var(--fig)}
-.edit-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:transparent;color:var(--navy);cursor:pointer;border:2px solid var(--navy)}
-:root[data-theme="dark"] .edit-btn{color:#FFFFFF;border-color:#FFFFFF}
+.edit-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:#FFFFFF;color:var(--navy);cursor:pointer;border:2px solid var(--navy)}
+:root[data-theme="dark"] .edit-btn{background:var(--navy);color:#FFFFFF;border-color:#FFFFFF}
 .cover-edit{position:absolute;top:10px;right:10px}
 .face-wrap{position:relative;display:inline-flex}
 .face-edit{position:absolute;right:-2px;bottom:-2px}
@@ -250,7 +251,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "18";
+const APP_VERSION = "19";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -638,7 +639,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=15" defer></script>
-<script src="live.js?v=15" defer></script>
+<script src="src/data.js?v=16" defer></script>
+<script src="live.js?v=16" defer></script>
 </body>
 </html>
