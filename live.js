@@ -196,7 +196,7 @@
   const parts = () => { const [y,m,d] = day().split("-").map(Number); return { y, m, d, date: new Date(Date.UTC(y, m - 1, d)) }; };
   const fmt = (opts) => new Intl.DateTimeFormat("en-US", { timeZone: "UTC", ...opts }).format(parts().date);
   const weekIndex = () => Math.min(3, Math.floor((parts().d - 1) / 7));
-  const firstName = () => esc(String(state.account?.name || "").split(/[\s,]+/).filter(Boolean)[0] || "");
+  const firstName = () => esc(String(myName() || "").replace(/^pastor\s+/i, "").split(/[\s,]+/).filter(Boolean)[0] || "");
   const label = (text, extra = "") => `<span class="label" style="color:var(--fig)${extra}">${text}</span>`;
   const panel = (lbl, body, extra = "") => `<section class="card"${extra}>${lbl ? label(lbl) : ""}${body}</section>`;
   const tile = (view, lbl, big, small) => `<button type="button" class="card" data-view="${view}" style="gap:4px;text-align:left;cursor:pointer;font:inherit;color:var(--ink)"><span style="font-size:12px;font-weight:700;color:var(--fig)">${lbl}</span><span style="font-size:16px;font-weight:700">${big}</span><span class="sub" style="font-size:13px">${small}</span></button>`;
@@ -232,7 +232,7 @@
     if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
     if (v === "gather") return T("Gatherings &amp; Special Dates");
     if (v === "profile") return T("My Profile");
-    if (v === "leaders") return T("How the ministry is growing", `Leader dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
+    if (v === "leaders") return T(`<span style="font-size:34px">How The Ministry Is Growing</span>`, `<span style="text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--fig)">Leader dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}</span><br><em style="font-size:13px">Participation only, never what couples write.</em>`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
     return H("", "RCI Marriage");
   }
   function today() {
@@ -629,8 +629,8 @@
     const schedule = `<section class="card dash"><div class="row" style="flex-wrap:wrap"><h2>Content schedule · 2027</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill cs-live">Live</span><span class="pill cs-ready">Ready</span><span class="pill cs-none">Not started</span></span></div>
       <div class="scroll"><table><thead><tr><th>Month</th><th>Fruit</th>${cols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${FRUIT.map((f, i) =>
         `<tr${day().startsWith("2027-") && i + 1 === curM ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)}</b></td><td>${esc(f[1])}</td>${cols.map(c => `<td>${cell(i + 1, c[0])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-      <p class="sub" style="font-size:13px">“Ready” means it’s in Monthly Content with a date that hasn’t arrived yet. <a href="${esc(link("content"))}" target="_blank" rel="noopener noreferrer">Open Monthly Content in SharePoint</a></p></section>`;
-    return `<div class="dash-top"><span class="pill dash-note">Participation only, never what couples write</span></div>${tiles}
+      <p class="sub" style="font-size:13px">“Ready” means it’s in Monthly Content with a date that hasn’t arrived yet.</p></section>`;
+    return `${tiles}
       <div class="cols"><div class="main">${health}</div><div class="side">${mentor}${signups}</div></div>${schedule}`;
   }
   function render() {
