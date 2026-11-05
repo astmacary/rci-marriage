@@ -231,7 +231,7 @@
     if (v === "branch") return T(esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
     if (v === "couple") return T("Branch couple", "", `<button type="button" class="linkbtn" data-view="branch" style="color:var(--cream);min-height:32px">‹ Back to Branch</button>`);
     if (v === "gather") return T("Gatherings &amp; Special Dates");
-    if (v === "profile") return T("Profile");
+    if (v === "profile") return T("My Profile");
     if (v === "leaders") return T("How the ministry is growing", "Leader dashboard", `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
     return H("", "RCI Marriage");
   }
@@ -322,10 +322,16 @@
     const mine = couple?.coupleKey;
     const mates = couple?.branch ? (state.rows.couples || []).map(item => D.read("couples", item)).filter(c => c.kind === "couple" && c.active !== false && c.branch === couple.branch)
       .sort((a, b) => (b.coupleKey === mine) - (a.coupleKey === mine)) : [];
-    const roster = panel("Couples", mates.length ? `<div class="avatars">${mates.map(c => c.coupleKey === mine
+    const all = (state.rows.couples || []).map(item => D.read("couples", item)).filter(c => c.kind === "couple" && c.active !== false)
+      .sort((a, b) => (b.coupleKey === mine) - (a.coupleKey === mine) || names(a).localeCompare(names(b)));
+    const circle = c => c.coupleKey === mine
       ? `<div><span style="background:var(--navy);color:var(--cream);border:2px solid var(--brand-gold)">${esc(initials(c))}</span>You</div>`
-      : `<button type="button" class="av-btn" data-couple="${esc(c.itemId)}"><span>${esc(initials(c))}</span>${esc(names(c))}</button>`).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned."), "");
-    return roster + panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div><p class="sub">Your Branch is 4–5 couples with a mentor couple. You meet in Grow week (week 3) to share and pray together.</p>`)
+      : `<button type="button" class="av-btn" data-couple="${esc(c.itemId)}"><span>${esc(initials(c))}</span>${esc(names(c))}</button>`;
+    const ministry = panel(`The ministry · ${all.length} couple${all.length === 1 ? "" : "s"}`, all.length ? `<div class="avatars">${all.map(circle).join("")}</div>` : empty("Couples will appear here as they join."));
+    const yours = panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div>
+      ${mates.length ? `<div class="avatars">${mates.map(circle).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned.")}
+      <p class="sub">Your Branch is 4–5 couples with a mentor couple. You meet in Grow week (week 3) to share and pray together.</p>`);
+    return ministry + yours
       + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc(couple?.mentor || "To be announced")}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p>${state.mentorSent ? `<p class="sub" style="font-weight:600;color:var(--fig)">Request sent. Your mentor couple will reach out.</p>` : `<button class="btn" type="button" data-live="mentor-request">We’d like our mentor couple to reach out</button>`}`);
   }
   function checkin() {
@@ -433,7 +439,7 @@
         <div style="font-size:17px;font-weight:700">${esc(g.text)}</div>
         ${g.details ? `<p class="sub" style="white-space:pre-wrap">${esc(g.details)}</p>` : `<p class="sub">Time and place to be announced.</p>`}
         ${D.events.includes(g.event) ? rsvpForm(g.event) : `<p class="sub" style="font-size:13px">RSVPs open closer to the date.</p>`}</section>`).join("")
-      : celebrate ? "" : `<section class="card">${empty("Nothing on this day. Days with a dot have a Gathering, birthday or anniversary.")}</section>`);
+      : celebrate ? "" : `<section class="card"><p class="sub" style="text-align:center;margin:0">Nothing on this date.</p></section>`);
     const upcoming = list.map(g => `<button type="button" class="card" data-gday="${g.date}" style="flex-direction:row;justify-content:space-between;align-items:center;cursor:pointer;font:inherit;color:var(--ink);text-align:left;padding:12px 16px"><span style="font-weight:700">${esc(g.text)}</span><span class="sub">${esc(g.when || longDate(g.date))}</span></button>`).join("");
     return `<section class="card cal-panel"><div class="cal-head"><h2>${esc(title)}</h2>
         <button type="button" class="btn ghost" data-gcal="today" style="padding:6px 10px;min-height:0">Today</button>
