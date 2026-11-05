@@ -88,6 +88,25 @@ async function managedToken() {
   return (await response.json()).access_token;
 }
 
+async function sendMarriageNotifications(kind, eventId, recipients) {
+  const key = process.env.RCI_MARRIAGE_PUSH_KEY;
+  if (!key || !recipients.size) return;
+  const memberIds = [...recipients];
+  for (let i = 0; i < memberIds.length; i += 100) {
+    const response = await fetch("https://rci-push-astmacary-16343.azurewebsites.net/api/push/marriage-send", {
+      method: "POST", redirect: "error", signal: AbortSignal.timeout(30000),
+      headers: { "Content-Type": "application/json", "x-functions-key": key },
+      body: JSON.stringify({ kind, eventId, memberIds: memberIds.slice(i, i + 100) })
+    });
+    if (!response.ok) throw new Error(`Marriage notification delivery failed (${response.status})`);
+  }
+}
+
+function rosterMemberIds(couple) {
+  return (couple?.members || []).map(member => lower(member.objectId))
+    .filter(id => /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(id));
+}
+
 async function run(log = console.log) {
   const { RCI_SITE_ID, RCI_SEALED_PRIVATE_KEY } = process.env;
   if (!RCI_SITE_ID || !/^[a-zA-Z0-9.,-]+$/.test(RCI_SITE_ID)) throw new Error("Set RCI_SITE_ID");
@@ -123,7 +142,9 @@ async function run(log = console.log) {
   const [roster, answers, checkins, intake, content, participationRows, rsvpRows] = await Promise.all(
     ["Couples", "Prompt Answers", "Sunday Check-ins", "Pilot Intake", "Monthly Content", "Participation", "RSVPs"].map(read)
   );
-  const result = project(roster.map(item => ({ id: item.id, data: readRow("couples", item) })), answers, checkins, intake, content.map(parse), Date.now());
+  const now = Date.now();
+  const couples = roster.map(item => ({ id: item.id, data: readRow("couples", item) }));
+  const result = project(couples, answers, checkins, intake, content.map(parse), now);
   async function publish(name, existing, records) {
     const byTitle = new Map(existing.map(item => [item.fields?.Title, item]));
     for (const [Title, record] of records) {
@@ -139,7 +160,9 @@ async function run(log = console.log) {
   await publish("Participation", participationRows, result.participation);
   await publish("RSVPs", rsvpRows, result.rsvps);
   let noteErrors = 0;
-  for (const journal of result.journals.values()) {
+  const sealedRecipients = new Map();
+  const coupleById = new Map(couples.map(couple => [couple.id, couple.data]));
+  for (const [coupleId, journal] of result.journals) {
     if (!journal.folder) continue;
     const target = `${path("Couple Journal")}/${journal.folder}`;
     const item = await request(target + "?$expand=fields");
@@ -152,13 +175,35 @@ async function run(log = console.log) {
         releasedNotes.push({ season, month: note.month, memberId: note.memberId, author: note.author, text: decryptNote(note.data, RCI_SEALED_PRIVATE_KEY) });
       } catch { noteErrors++; }
     }
-    if (JSON.stringify(old.pilotMonths || []) === JSON.stringify(pilotMonths) &&
-        JSON.stringify(old.releasedNotes || []) === JSON.stringify(releasedNotes)) continue;
-    const AppData = JSON.stringify({ ...old, version: 1, pilotMonths, releasedNotes });
-    if (!item.eTag || AppData.length > 60000) throw new Error("Journal missing eTag or at capacity");
-    await request(target + "/fields", "PATCH", { AppData }, item.eTag);
+    if (JSON.stringify(old.pilotMonths || []) !== JSON.stringify(pilotMonths) ||
+        JSON.stringify(old.releasedNotes || []) !== JSON.stringify(releasedNotes)) {
+      const AppData = JSON.stringify({ ...old, version: 1, pilotMonths, releasedNotes });
+      if (!item.eTag || AppData.length > 60000) throw new Error("Journal missing eTag or at capacity");
+      await request(target + "/fields", "PATCH", { AppData }, item.eTag);
+    }
+    for (const note of releasedNotes) {
+      const release = monthlyRelease(note.month);
+      if (note.season !== season || !Number.isFinite(release) || now < release || now >= release + 86400000) continue;
+      const recipients = sealedRecipients.get(note.month) || new Set();
+      rosterMemberIds(coupleById.get(coupleId)).forEach(id => recipients.add(id));
+      sealedRecipients.set(note.month, recipients);
+    }
   }
   log(`Processed ${result.participation.size} participation and ${result.rsvps.size} RSVP projections.`);
+  for (const [month, recipients] of sealedRecipients) await sendMarriageNotifications("sealed-note", `sealed:${month}`, recipients);
+  const date = ministryDay(new Date(now));
+  const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(now));
+  if (date >= "2027-01-25" && date.startsWith(season + "-") && new Date(date + "T00:00:00Z").getUTCDay() === 0 && hour >= 9 && hour < 12) {
+    const recipients = new Set();
+    for (const { id, data } of couples) {
+      if (data.kind !== "couple" || data.active === false) continue;
+      rosterMemberIds(data).forEach(memberId => {
+        const flags = result.participation.get(`week:${weekStart(date)}:${id}:${memberId}`);
+        if (!flags?.checkedIn) recipients.add(memberId);
+      });
+    }
+    await sendMarriageNotifications("sunday-check-in", `sunday:${date}`, recipients);
+  }
   if (noteErrors) throw new Error(`${noteErrors} sealed notes could not be released`);
 }
 
