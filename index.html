@@ -130,11 +130,13 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 :root[data-theme="dark"] .head .eyebrow{color:#D4A66E}
 :root[data-theme="dark"] .card{border-color:#1E2E44}
 :root[data-theme="dark"] .rate span,:root[data-theme="dark"] .tog-check span,:root[data-theme="dark"] .pill-check span{border-color:rgba(196,149,95,.6)}
-:root[data-theme="dark"] main *:not(h1):not(h2):not(h3):not(.label):not(.label *),:root[data-theme="dark"] nav.tabs button{font-weight:400!important}
+:where(:root[data-theme="dark"] main *:not(h1,h2,h3,.label,.label *)),:where(:root[data-theme="dark"] nav.tabs button){font-weight:400!important}
+:root[data-theme="dark"] .month .rhythm div{font-weight:700!important}
+:root[data-theme="dark"] main .btn:not(.ghost):not(.badge-red){background:transparent!important;color:var(--ink)!important;border:1.5px solid var(--brand-gold)!important;font-weight:700!important}
 :root[data-theme="dark"] .month .name,:root[data-theme="dark"] .month .label{font-weight:700!important}
 :root[data-theme="dark"] .card>b,:root[data-theme="dark"] .person b{font-weight:600!important}
 .rate span{border-width:1px!important}
-.person .face{border:0!important}
+.person .face{border:1.5px solid var(--line2)!important;box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .pill-check span{border-width:1px!important}
 .theme-toggle svg{width:15px;height:15px}
 nav.tabs button svg{width:28px;height:28px}
@@ -262,7 +264,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "23";
+const APP_VERSION = "24";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -650,7 +652,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=20" defer></script>
-<script src="live.js?v=20" defer></script>
+<script src="src/data.js?v=21" defer></script>
+<script src="live.js?v=21" defer></script>
 </body>
 </html>

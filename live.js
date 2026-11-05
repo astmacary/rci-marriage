@@ -211,7 +211,7 @@
   function tabBar() {
     const cur = TAB_OF[state.view];
     const item = (id, view, text) => `<button type="button" data-view="${view}" ${cur === id ? 'aria-current="page"' : ""} ${state.loading ? "disabled" : ""}>${TAB_ICON[id]}${text}</button>`;
-    return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Home")}${item("us","checkin","Check In")}${item("branch","branch","Branch")}${item("gather","gather","Gatherings")}${item("profile","profile","Profile")}</div></nav>`;
+    return `<nav class="tabs" aria-label="Main"><div>${item("today","today","Home")}${item("us","grow","Check In")}${item("branch","branch","Branch")}${item("gather","gather","Gatherings")}${item("profile","profile","Profile")}</div></nav>`;
   }
   function usSeg(cur) {
     const a = (view, text) => `<button type="button" data-view="${view}" ${cur === view ? 'aria-current="page"' : ""}>${text}</button>`;
@@ -239,7 +239,7 @@
     const content = (state.rows.content || []).map(item => ({ item, data: D.read("content", item) }));
     const prompt = content.find(({data}) => data.kind === "prompt" && data.date === day());
     const f = FRUIT[parts().m - 1], w = weekIndex();
-    const hero = `<section class="month" aria-label="This month"><div class="row"><span class="label">${esc(f[0])} fruit</span><span style="font-size:12px;color:#C9D2DD">Fruit of Our Union</span></div>
+    const hero = `<section class="month" aria-label="This month"><div class="row"><span class="label">${esc(f[0])} fruit</span><span style="font-size:12px;color:#C9D2DD;letter-spacing:.08em">FRUIT OF OUR UNION</span></div>
       <div class="name">${esc(f[1])}</div><div style="font-size:15px;line-height:1.4;color:#C9D2DD">${esc(f[2])}</div>
       <div class="rhythm">${STEPS.map((step, i) => `<div class="${i < w ? "done" : i === w ? "now" : ""}">${step}${i < w ? " ✓" : ""}</div>`).join("")}</div></section>`;
     const revealed = state.shared.find(entry => entry.kind === "reveal" && entry.date === day());
