@@ -58,7 +58,9 @@
         memberEmails: emails.length ? emails : old.memberEmails,
         branch: f.Branch || old.branch, mentorCouple: f.MentorCouple || old.mentorCouple,
         coupleKey: f.CoupleKey || old.coupleKey || str(item?.id),
-        journalItemId: f.JournalItemId || old.journalItemId };
+        journalItemId: f.JournalItemId || old.journalItemId,
+        spouse1Name: f.Spouse1Name || old.members?.[0]?.name || "", spouse2Name: f.Spouse2Name || old.members?.[1]?.name || "",
+        anniversary: f.AnniversaryDate ? fromDate(f.AnniversaryDate) : old.anniversary };
     }
     if (key === "answers") return { ...old,
       kind: old.kind || (f.PromptDate ? "prompt-answer" : undefined),

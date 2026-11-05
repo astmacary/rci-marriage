@@ -70,7 +70,8 @@
     if (!pushSupported()) return card("Notifications", empty("On iPhone or iPad, add RCI Marriage to your Home Screen and open it from its icon."));
     const action = push.enabled ? ["push-off", "Turn off on this device"] : push.key ? ["push-on", "Enable notifications"] : ["push-check", "Check notification availability"];
     return card("Notifications", empty("Get RCI Marriage reminders on this device.") +
-      (push.message ? `<p role="status">${esc(push.message)}</p>` : "") + (push.busy ? empty("Updating notifications…") : button(...action)));
+      (push.message ? `<p role="status">${esc(push.message)}</p>` : "") + (push.busy ? empty("Updating notifications…") : action[0] === "push-on"
+        ? `<button class="btn" type="button" data-live="push-on" style="background:#B23A48;color:#fff;border-color:#B23A48">Enable notifications</button>` : button(...action)));
   }
   const siteUrl = `https://${C.siteHost}${C.sitePath}`;
   const day = D.ministryDay;
@@ -296,18 +297,29 @@
     const items = content.filter(({data}) => order.includes(data.kind)).sort((a, b) => order.indexOf(a.data.kind) - order.indexOf(b.data.kind));
     const w = weekIndex();
     const kindLabel = { video: "Plant · Leader video", devotional: "Plant · Devotional", challenge: "Water · Couple challenge" };
-    return (items.map(({item, data}) => `<section class="card"${data.kind === "challenge" && w === 1 ? ' style="border:2px solid var(--brand-gold)"' : ""}>${label(kindLabel[data.kind])}
+    const weekOf = { video: 0, devotional: 0, challenge: 1 };
+    const now = i => i === w ? ' style="position:relative;border:2px solid var(--brand-gold)"' : "";
+    const tag = i => i === w ? `<span class="pill" style="position:absolute;top:10px;right:10px;background:var(--brand-gold);color:var(--navy);font-weight:700">This week</span>` : "";
+    return (items.map(({item, data}) => `<section class="card"${now(weekOf[data.kind])}>${tag(weekOf[data.kind])}${label(kindLabel[data.kind])}
         ${data.kind === "video" ? `<div style="display:flex;gap:12px;align-items:center"><div class="video"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#C4955F"><path d="M8 5v14l11-7z"/></svg></div><div style="font-weight:700">${esc(item.fields.Title)}</div></div>` : `<div style="font-size:16px;font-weight:700">${esc(item.fields.Title)}</div>`}
         <p class="sub" style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer" style="font-weight:700">Open ${data.kind === "video" ? "video" : "resource"} ›</a>` : ""}</section>`).join("")
-      || panel("Week 1 · Plant", `<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`))
-      + panel("Week 3 · Grow", `<div style="font-size:16px;font-weight:700">Share and pray with your Branch</div><button type="button" data-view="branch" class="linkbtn">Open your Branch ›</button>`)
-      + panel("Week 4 · Harvest", `<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="orchard" class="linkbtn">See Our Orchard ›</button>`);
+      || panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0)))
+      + panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with your Branch</div><button type="button" data-view="branch" class="linkbtn">Open your Branch ›</button>`, now(2))
+      + panel("Week 4 · Harvest", `${tag(3)}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="orchard" class="linkbtn">See Our Orchard ›</button>`, now(3));
   }
   function branch() {
     const couple = profile();
     const issue = state.errors.couples;
     if (issue) return panel("Your Branch", empty(issue));
-    return panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div><p class="sub">Your Branch is 4–5 couples with a mentor couple. You meet in Grow week (week 3) to share and pray together.</p>`)
+    const initials = c => [c.spouse1Name, c.spouse2Name].map(n => String(n || "?").trim()[0] || "?").join("&");
+    const names = c => [c.spouse1Name, c.spouse2Name].map(n => String(n || "").split(/\s+/)[0]).filter(Boolean).join(" & ") || "Couple";
+    const mine = couple?.coupleKey;
+    const mates = couple?.branch ? (state.rows.couples || []).map(item => D.read("couples", item)).filter(c => c.kind === "couple" && c.active !== false && c.branch === couple.branch)
+      .sort((a, b) => (b.coupleKey === mine) - (a.coupleKey === mine)) : [];
+    const roster = panel("Couples", mates.length ? `<div class="avatars">${mates.map(c => c.coupleKey === mine
+      ? `<div><span style="background:var(--navy);color:var(--cream);border:2px solid var(--brand-gold)">${esc(initials(c))}</span>You</div>`
+      : `<div><span>${esc(initials(c))}</span>${esc(names(c))}</div>`).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned."), "");
+    return roster + panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div><p class="sub">Your Branch is 4–5 couples with a mentor couple. You meet in Grow week (week 3) to share and pray together.</p>`)
       + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc(couple?.mentor || "To be announced")}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p><button class="btn" type="button" data-view="checkin">Open the Sunday check-in</button>`);
   }
   function checkin() {
@@ -374,7 +386,13 @@
   function gather() {
     if (state.errors.content || state.errors.pilotIntake) return card("Gather", empty(state.errors.content || state.errors.pilotIntake));
     const content = (state.rows.content || []).map(D.parse);
-    return D.events.map(event => {
+    const dates = (state.rows.content || []).map(item => D.read("content", item)).filter(row => row.kind === "gathering" && String(row.date || "").startsWith("2027-"))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const schedule = panel("2027 gatherings", (dates.length ? `<div style="display:flex;flex-direction:column;gap:10px">${dates.map(row =>
+        `<div style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:10px"><span style="font-weight:700">${esc(row.when || row.date)}</span><span class="sub" style="text-align:right">${esc(row.text)}</span></div>`).join("")}</div>`
+      : empty("Dates will appear here when the ministry publishes them."))
+      + `<p class="sub" style="font-size:13px;font-style:italic;margin:0">These are projected dates, pending the church calendar.</p>`);
+    return schedule + D.events.map(event => {
       const title = event === "retreat" ? "Marriage Retreat" : "Harvest Celebration";
       const details = content.find(row => row.kind === "event" && row.event === event && row.season === "2027");
       if (!details) return card(title, empty("Details and RSVPs will open when the ministry publishes this event."));
@@ -445,7 +463,7 @@
     const views = { calendar, today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
     root.innerHTML = header() + accountStrip() + `<main>
       ${!account ? card("Sign in", `<p class="sub">Sign in with your church Microsoft account to open your ministry data. The sign-in screen uses the shared RCI Productions registration.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}<a href="?demo=1">Explore the sample demo</a>`) :
-        `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.loading ? "" : !state.site ? empty("The connection is not ready. Refresh to retry.") : (views[state.view] || today)()}${state.site && state.view === "today" ? notifications() : ""}`}
+        `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.site && !state.loading && state.view === "today" ? notifications() : ""}${state.loading ? "" : !state.site ? empty("The connection is not ready. Refresh to retry.") : (views[state.view] || today)()}`}
       </main>${account && !wide ? tabBar() : ""}`;
   }
   window.renderLive = render;
