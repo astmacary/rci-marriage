@@ -5,7 +5,7 @@ The RCI Marriage Ministry app for 2027, **Fruit of Our Union**.
 - **Demo:** https://astmacary.github.io/rci-marriage/ (sample couple and data, saved on the viewer's device only)
 - **Leader view in the demo:** https://astmacary.github.io/rci-marriage/#leaders
 
-It is built the same way as RCI Productions: one installable web page (`index.html`) on GitHub Pages. People sign in with Microsoft and the data lives in SharePoint lists. While `CONFIG.clientId` is empty, or the page is opened anywhere other than an address in `CONFIG.appHosts`, it runs in demo mode.
+It is built as one installable web page (`index.html`) on GitHub Pages. People sign in with Microsoft and the data lives in SharePoint lists. While `CONFIG.clientId` is empty, or the page is opened anywhere other than an address in `CONFIG.appHosts`, it runs in demo mode.
 
 ## What's in the app
 
