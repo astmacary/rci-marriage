@@ -81,12 +81,13 @@ test('leader view requests only its four lists, never private writing', async ()
   assert.ok(app.calls.every(({path}) => /\/lists\/(couples|participation|rsvps|content)\//.test(path)));
   assert.doesNotMatch(app.root.innerHTML, /30 couples|Marcus|Tasha/);
 });
-test('journal reads one permissioned folder, never the entire journal list', async () => {
+test('journal reads the couple folder plus the reveal items SharePoint lets this user see', async () => {
   const app = await liveHarness(); app.calls.length = 0;
   await app.clickView('journal');
   const journals = app.calls.filter(({path}) => path.includes('/lists/reveals/'));
-  assert.equal(journals.length, 1);
-  assert.match(journals[0].path, /\/items\/9\?/);
+  assert.equal(journals.length, 2);
+  assert.ok(journals.some(({path}) => /\/items\/9\?/.test(path)));
+  assert.ok(journals.every(({options}) => !options?.method || options.method === 'GET'));
 });
 test('denied reads remain an access error instead of becoming sample or empty data', async () => {
   const app = await liveHarness({ deniedAnswers: true });
@@ -120,4 +121,17 @@ test('rows read from columns first and still read older AppData rows', () => {
 });
 test('couple journal link comes from the JournalItemId column', () => {
   assert.equal(D.read('couples', { fields: { Spouse1Email: 'a@example.org', JournalItemId: '12' } }).journalItemId, '12');
+});
+test('shared journal items skip the folder, other couples and unknown kinds', () => {
+  const couple = { coupleKey: 'A', journalItemId: '1', memberEmails: ['one@x.org', 'two@x.org'] };
+  const items = [
+    { id: '1', fields: { Title: 'A' } },
+    { id: '2', fields: { Kind: 'Reveal', CoupleKey: 'A', PromptDate: '2027-01-02T12:00:00Z', Spouse1Answer: 'a', Spouse2Answer: 'b' } },
+    { id: '3', fields: { Kind: 'Reveal', CoupleKey: 'B', PromptDate: '2027-01-03T12:00:00Z' } },
+    { id: '4', fields: { Kind: 'Check-in', WeekOf: '2027-01-03T12:00:00Z', Spouse1Answer: 'c' } },
+    { id: '5', fields: { Kind: 'Other' } }
+  ];
+  assert.deepEqual(D.shared(items, couple).map(e => [e.id, e.kind, e.date]), [['4', 'check-in', '2027-01-03'], ['2', 'reveal', '2027-01-02']]);
+  assert.equal(D.side(couple, 'TWO@x.org'), 'spouse2');
+  assert.equal(D.side(couple, 'someone@x.org'), '');
 });

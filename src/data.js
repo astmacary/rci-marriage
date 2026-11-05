@@ -60,7 +60,25 @@
     }
     throw new Error("Please refresh the app before saving.");
   };
-  const api = { parse, own, escape, safeLink, validate, read, columns, toDate, fromDate };
+  // Items the flows write into a couple's journal folder: reveals and shared check-ins.
+  // SharePoint permissions already limit what a spouse can read; this also skips the folder
+  // itself and anything tagged for another couple (site owners can see every folder).
+  const shared = (items, couple) => (items || []).map(item => {
+    const f = item?.fields || {}, kind = str(f.Kind).toLowerCase();
+    if (!["reveal", "check-in"].includes(kind)) return null;
+    if (couple?.journalItemId && str(item.id) === str(couple.journalItemId)) return null;
+    if (f.CoupleKey && couple?.coupleKey && str(f.CoupleKey) !== str(couple.coupleKey)) return null;
+    return { id: str(item.id), kind, title: str(f.Title),
+      date: fromDate(f.PromptDate || f.WeekOf || item.createdDateTime),
+      spouse1: str(f.Spouse1Answer), spouse2: str(f.Spouse2Answer) };
+  }).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date) || Number(b.id) - Number(a.id));
+  // Which side of a shared item belongs to the signed-in spouse.
+  const side = (couple, email) => {
+    const emails = (couple?.memberEmails || []).map(v => String(v).toLowerCase());
+    const i = emails.indexOf(String(email || "").toLowerCase());
+    return i === 1 ? "spouse2" : i === 0 ? "spouse1" : "";
+  };
+  const api = { shared, side, parse, own, escape, safeLink, validate, read, columns, toDate, fromDate };
   root.RCIData = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof window === "undefined" ? globalThis : window);

@@ -3,7 +3,7 @@
   if (window.RCI_APP.DEMO) return;
   const C = window.RCI_CONFIG, D = window.RCIData, esc = D.escape;
   const scopes = ["Sites.ReadWrite.All", "User.Read"];
-  const state = { account: null, site: null, lists: {}, rows: {}, errors: {}, loading: false, message: "", view: "today" };
+  const state = { shared: [], account: null, site: null, lists: {}, rows: {}, errors: {}, loading: false, message: "", view: "today" };
   let auth, controller = new AbortController();
   const root = document.getElementById("app");
   const siteUrl = `https://${C.siteHost}${C.sitePath}`;
@@ -56,7 +56,7 @@
       const needed = state.view === "leaders" ? ["couples", "participation", "rsvps", "content"]
         : state.view === "checkin" ? ["checkins", "couples"] : state.view === "journal" ? ["couples"] : ["content", "answers", "couples"];
       await Promise.all(needed.map(load));
-      if (state.view === "journal") await loadJournal();
+      if (state.view !== "leaders") await loadJournal();
     } catch (error) { state.message = notice(error); }
     state.loading = false; render();
   }
@@ -68,11 +68,27 @@
   }
   async function loadJournal() {
     delete state.errors.reveals;
-    state.journal = null;
+    state.journal = null; state.shared = [];
     const couple = profile();
     if (!couple?.journalItemId) return;
-    try { state.journal = await graph(`${base("reveals")}/items/${encodeURIComponent(couple.journalItemId)}?$expand=fields`); }
-    catch (error) { state.errors.reveals = notice(error); }
+    try {
+      const [folder, items] = await Promise.all([
+        graph(`${base("reveals")}/items/${encodeURIComponent(couple.journalItemId)}?$expand=fields`), rows("reveals")]);
+      state.journal = folder; state.shared = D.shared(items, couple);
+    } catch (error) { state.errors.reveals = notice(error); }
+  }
+  // Both answers side by side, the signed-in spouse first.
+  function pair(entry) {
+    const mine = D.side(profile(), state.account?.username);
+    const [me, them] = mine === "spouse2" ? [entry.spouse2, entry.spouse1] : [entry.spouse1, entry.spouse2];
+    const col = (label, text) => `<div style="flex:1 1 220px;background:var(--paper,#faf7f2);border-radius:12px;padding:12px"><p class="label" style="margin:0 0 6px">${label}</p><p style="white-space:pre-wrap;margin:0">${esc(text) || '<span class="sub">Nothing shared.</span>'}</p></div>`;
+    return `<article style="border-top:1px solid var(--line);padding-top:12px"><p class="sub" style="margin:0 0 4px">${esc(entry.date)}</p>${entry.title && entry.kind === "reveal" ? `<p style="margin:0 0 8px"><b>${esc(entry.title)}</b></p>` : ""}<div style="display:flex;gap:10px;flex-wrap:wrap">${col(mine ? "You" : "Spouse 1", me)}${col(mine ? "Your spouse" : "Spouse 2", them)}</div></article>`;
+  }
+  function sharedList(kind, limit, none) {
+    if (state.errors.reveals) return empty(state.errors.reveals);
+    if (!state.journal) return empty("Your couple profile has not been linked to its private journal folder yet. Ask a ministry administrator to finish setup.");
+    const list = state.shared.filter(entry => entry.kind === kind).slice(0, limit);
+    return list.map(pair).join("") || empty(none);
   }
   async function save(key, logicalKey, data) {
     D.validate(data);
@@ -94,18 +110,21 @@
     const prompt = content.find(({data}) => data.kind === "prompt" && data.date === day());
     const body = state.errors.content ? empty(state.errors.content) : !prompt ? empty("No daily prompt has been published for today.")
       : prompt.data.type === "Check-in" ? `<p class="big">It’s Sunday: no prompt today.</p><p class="sub">${esc(prompt.data.text)}. Do your check-in instead.</p><button class="btn" type="button" data-view="checkin">Open the Sunday check-in</button>`
-      : `${prompt.data.type ? `<p class="label" style="color:var(--fig);margin:0">${esc(prompt.data.type)}${prompt.data.week ? " · " + esc(prompt.data.week) : ""}</p>` : ""}<p class="big">${esc(prompt.data.text)}</p><form data-form="answer"><input type="hidden" name="promptId" value="${esc(prompt.item.id)}"><label for="live-answer">Your answer</label><textarea id="live-answer" name="answer" maxlength="12000" required rows="5"></textarea><p class="sub">Saved to your private answers. Sharing with your spouse requires the ministry’s Reveal Together flow.</p><button class="btn" type="submit">Save my answer</button><p role="status" class="form-status"></p></form>`;
-    return card("Today’s prompt", body) + card("My saved answers", responseList("answers")) + card("Grow", state.errors.content ? empty(state.errors.content) :
+      : `${prompt.data.type ? `<p class="label" style="color:var(--fig);margin:0">${esc(prompt.data.type)}${prompt.data.week ? " · " + esc(prompt.data.week) : ""}</p>` : ""}<p class="big">${esc(prompt.data.text)}</p><form data-form="answer"><input type="hidden" name="promptId" value="${esc(prompt.item.id)}"><label for="live-answer">Your answer</label><textarea id="live-answer" name="answer" maxlength="12000" required rows="5"></textarea><p class="sub">Only you can see your answer until your spouse answers too. Then you’ll both see the two answers side by side.</p><button class="btn" type="submit">Save my answer</button><p role="status" class="form-status"></p></form>`;
+    const revealed = state.shared.find(entry => entry.kind === "reveal" && entry.date === day());
+    const answered = own("answers").some(item => D.read("answers", item).date === day());
+    const reveal = revealed ? pair(revealed) : answered ? empty("Your answer is saved. When your spouse answers today’s prompt, both answers will appear here. Refresh to check.") : empty("Answer today’s prompt and it will be revealed here once you’ve both answered.");
+    return card("Today’s prompt", body) + card("Revealed together", reveal) + card("Earlier reveals", sharedList("reveal", 7, "Reveals will collect here as you both answer prompts.")) + card("My saved answers", responseList("answers")) + card("Grow", state.errors.content ? empty(state.errors.content) :
       content.filter(({data}) => ["video", "devotional", "challenge"].includes(data.kind)).map(({item,data}) =>
         `<article><h3>${esc(item.fields.Title)}</h3><p style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer">Open resource</a>` : ""}</article>`).join("") || empty("Ministry resources will appear here when published."));
   }
   function checkin() {
-    return card("Sunday check-in", `<form data-form="checkin" style="display:grid;gap:12px"><p class="sub">These responses save privately. Spouse sharing and mentor notifications need the ministry flows.</p>
+    return card("Sunday check-in", `<form data-form="checkin" style="display:grid;gap:12px"><p class="sub">Your check-in is shared with your spouse when you save it. If you ask for your mentors, they get a short note to reach out. They don’t see your answers.</p>
       ${["Connected", "Heard", "Spiritually together", "Having fun"].map((name,i) => `<label>${name}<select name="rating${i}" required style="display:block;font:inherit;padding:10px;width:100%"><option value="">Choose 1–5</option>${[1,2,3,4,5].map(n=>`<option>${n}</option>`).join("")}</select></label>`).join("")}
       <label for="live-need">One thing I need this week</label><textarea id="live-need" name="need" maxlength="6000" rows="3"></textarea>
       <label for="live-saw">Where I saw growth in you</label><textarea id="live-saw" name="saw" maxlength="6000" rows="3"></textarea>
       <label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" name="mentor" value="yes" style="width:22px;height:22px"> We’d like our mentor couple to reach out</label><p class="sub" style="margin-top:-6px">Optional. Only your mentor couple gets a heads-up, with no details.</p>
-      <button class="btn" type="submit">Save my check-in</button><p role="status" class="form-status"></p></form>`) + card("My saved check-ins", responseList("checkins"));
+      <button class="btn" type="submit">Save my check-in</button><p role="status" class="form-status"></p></form>`) + card("Our check-ins", sharedList("check-in", 8, "Check-ins you and your spouse save will appear here.")) + card("My saved check-ins", responseList("checkins"));
   }
   function journal() {
     if (state.errors.couples || state.errors.reveals) return card("Our journal", empty(state.errors.reveals || state.errors.couples));
@@ -114,7 +133,7 @@
     const entries = Array.isArray(savedEntries) ? savedEntries : [];
     return card("Our shared journal", `<p class="sub">Notes added here are visible immediately to both spouses. Site owners and tenant administrators retain administrative access.</p>
       ${entries.map(entry=>`<article style="border-top:1px solid var(--line)"><p class="sub">${esc(entry.date)}</p><p style="white-space:pre-wrap">${esc(entry.text)}</p></article>`).join("") || empty("No shared notes yet.")}
-      <form data-form="journal"><label for="journal-note">Add a note together</label><textarea id="journal-note" name="text" maxlength="6000" rows="4" required></textarea><button class="btn" type="submit">Save to our journal</button><p role="status" class="form-status"></p></form>`);
+      <form data-form="journal"><label for="journal-note">Add a note together</label><textarea id="journal-note" name="text" maxlength="6000" rows="4" required></textarea><button class="btn" type="submit">Save to our journal</button><p role="status" class="form-status"></p></form>`) + card("All our reveals", sharedList("reveal", 400, "No reveals yet."));
   }
   function leaders() {
     return card("Leader dashboard", `<p class="sub">This view loads the four ministry lists only. It does not read couples’ answers, check-ins or journal entries.</p>`) +
@@ -140,7 +159,7 @@
       if (target.dataset.live === "refresh" && !state.loading) await loadView();
       if (target.dataset.live === "signout") {
         controller.abort(); controller = new AbortController(); const account = state.account;
-        state.account = null; state.rows = {}; state.journal = null; state.site = null; render();
+        state.account = null; state.rows = {}; state.journal = null; state.shared = []; state.site = null; render();
         await auth.logoutRedirect({ account, postLogoutRedirectUri: C.redirectUri });
       }
     } catch (error) { state.message = notice(error); render(); }
