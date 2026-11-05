@@ -110,6 +110,7 @@ th:first-child,td:first-child{padding-left:0}
 <body>
 <div id="app" class="app"></div>
 
+<script src="config.js"></script>
 <script>
 /* ============================================================
    CONFIGURATION: same pattern as RCI Productions.
@@ -117,27 +118,10 @@ th:first-child,td:first-child{padding-left:0}
    and creating the SharePoint site (see README.md).
    Leave clientId empty to run in demo mode with sample data.
    ============================================================ */
-const CONFIG = {
-  clientId: "",                 // Application (client) ID from Entra ID, e.g. "RCI Marriage"
-  tenantId: "",                 // Directory (tenant) ID, so guest (outside) couples can sign in
-  appHosts: [".github.io"],     // addresses the app may run live at; anywhere else is demo mode
-  siteHost: "",                 // e.g. "contoso.sharepoint.com"
-  sitePath: "/sites/RCIMarriage",
-  lists: {
-    couples: "",      // Couples: one row per couple (spouse emails, Branch)
-    answers: "",      // Prompt Answers: author-only reads
-    reveals: "",      // Reveals: written by Power Automate, shared with the two spouses only
-    checkins: "",     // Sunday Check-ins: author-only reads, shared to spouse by flow
-    participation: "",// Participation: no content, leaders read this
-    mentorRequests: "",
-    content: "",      // Monthly Content: prompts, videos, challenges (leaders edit)
-    rsvps: ""
-  },
-  leaders: []         // sign-ins that see the leader dashboard
-};
-const onAppHost = CONFIG.appHosts.some(h => h.startsWith(".") ? location.hostname.endsWith(h) : location.hostname === h);
-const DEMO = !CONFIG.clientId || /[?&]demo\b/.test(location.search) || !onAppHost;
-const APP_VERSION = "1";
+const CONFIG = window.RCI_CONFIG;
+const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
+const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
+const APP_VERSION = "2";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -191,8 +175,8 @@ const DEFAULT_STATE = {
   rsvp:null, retreat:false, harvest:false, janDay:25, contacted:{2:true}
 };
 const STORE_KEY = "rci-marriage:demo:v" + APP_VERSION;
-let S = (() => { try { return Object.assign({}, DEFAULT_STATE, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch(_) { return Object.assign({}, DEFAULT_STATE); } })();
-function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(_){} }
+let S = (() => { if (!DEMO) return structuredClone(DEFAULT_STATE); try { return Object.assign({}, DEFAULT_STATE, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch(_) { return Object.assign({}, DEFAULT_STATE); } })();
+function save(){ if (!DEMO) return; try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(_){} }
 function set(patch){ Object.assign(S, patch); save(); render(); }
 
 /* ---------- helpers ---------- */
@@ -480,6 +464,7 @@ V.leaders = () => {
 const VIEWS = Object.keys(V);
 function current(){ const h = location.hash.slice(1); return VIEWS.includes(h) ? h : "today"; }
 function render(){
+  if (!DEMO) { if (window.renderLive) window.renderLive(); else document.getElementById("app").innerHTML = '<main><h1>RCI Marriage</h1><p>Connecting…</p></main>'; return; }
   const view = current(), app = document.getElementById("app");
   const wide = view === "leaders";
   app.className = "app" + (wide ? " wide" : "");
@@ -492,11 +477,13 @@ let lastView = null;
 window.addEventListener("hashchange", () => { render(); if (current() !== lastView){ window.scrollTo(0,0); lastView = current(); } });
 
 document.addEventListener("input", e => {
+  if (!DEMO) return;
   const k = e.target.dataset && e.target.dataset.input; if (!k) return;
   S[k] = e.target.value; save();
   if (k === "draft"){ const b = document.querySelector('[data-act="submit-reveal"]'); if (b) b.disabled = !S.draft.trim(); }
 });
 document.addEventListener("click", e => {
+  if (!DEMO) return;
   const b = e.target.closest("[data-act]"); if (!b) return;
   const i = Number(b.dataset.i), act = b.dataset.act;
   if (act === "submit-reveal" && S.draft.trim()) set({submitted:true});
@@ -516,8 +503,12 @@ document.addEventListener("click", e => {
   if (act === "contacted") set({contacted: Object.assign({}, S.contacted, {[i]: !S.contacted[i]})});
 });
 
+window.RCI_APP = { DEMO };
 render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
+<script src="vendor/msal-browser.min.js" defer></script>
+<script src="src/data.js" defer></script>
+<script src="live.js" defer></script>
 </body>
 </html>
