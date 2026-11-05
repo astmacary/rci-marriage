@@ -26,9 +26,9 @@
   color-scheme: light;
 }
 :root[data-theme="dark"]{
-  --bg:#071628; --surface:#10263F; --ink:#F3EEE6; --muted:#A9B4C2; --line:#1F3A5A; --soft:#1A3352; --line2:#2C4B6E; --field:#0C2036;
-  --leaf:#C4955F; --on-leaf:#0A2440; --leaf-soft:#1A3352; --fig:#D4A66E; --fig-soft:#1A3352; --gold:#D4A66E; --gold-soft:#1A3352;
-  --hero:#13304F; --nav:#0B1D33; --blue:#8DB8E0;
+  --bg:#040B15; --surface:#0A1726; --ink:#F7F8FA; --muted:#B9C2CE; --line:#18283B; --soft:#122236; --line2:#24384F; --field:#07121F;
+  --leaf:#F3F4F6; --on-leaf:#0A2440; --leaf-soft:#122236; --fig:#E4E8EE; --fig-soft:#122236; --gold:#D4A66E; --gold-soft:#1C2A3A;
+  --navy:#06101D; --hero:#0C1B2E; --nav:#06101D; --blue:#8DB8E0;
   color-scheme: dark;
 }
 *{box-sizing:border-box}
@@ -139,8 +139,7 @@ nav.tabs button[data-view="today"] svg,nav.tabs button[data-view="checkin"] svg{
 #ptr{position:fixed;top:0;left:0;right:0;height:0;overflow:hidden;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:var(--surface);color:var(--muted);font-weight:600;font-size:13px;border-bottom:1px solid var(--line);transition:height .12s ease;padding-top:env(safe-area-inset-top,0px)}
 #ptr span{padding:0 0 12px}
 #ptr.ready{color:var(--fig)}
-.edit-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:#FFFFFF;color:var(--navy);cursor:pointer;border:2px solid var(--navy)}
-:root[data-theme="dark"] .edit-btn{background:var(--navy);color:#FFFFFF;border-color:#FFFFFF}
+.edit-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:var(--surface);color:var(--ink);cursor:pointer;border:1.5px solid var(--line2);box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .cover-edit{position:absolute;top:10px;right:10px}
 .face-wrap{position:relative;display:inline-flex}
 .face-edit{position:absolute;right:-2px;bottom:-2px}
@@ -251,7 +250,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "19";
+const APP_VERSION = "20";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -639,7 +638,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=16" defer></script>
-<script src="live.js?v=16" defer></script>
+<script src="src/data.js?v=17" defer></script>
+<script src="live.js?v=17" defer></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
   if (window.RCI_APP.DEMO) return;
   const C = window.RCI_CONFIG, D = window.RCIData, esc = D.escape;
   const scopes = ["Sites.ReadWrite.All", "User.Read"];
-  const state = { shared: [], account: null, site: null, lists: {}, rows: {}, errors: {}, loading: false, message: "", view: "today", week: D.weekStart(D.ministryDay()) };
+  const state = { shared: [], account: null, site: null, lists: {}, rows: {}, errors: {}, loading: false, message: "", view: (() => { try { const v = JSON.parse(localStorage.getItem("rci-marriage-view") || "{}"); return typeof v.view === "string" && v.view ? v.view : "today"; } catch { return "today"; } })(), coupleId: (() => { try { return JSON.parse(localStorage.getItem("rci-marriage-view") || "{}").coupleId || null; } catch { return null; } })(), week: D.weekStart(D.ministryDay()) };
   let auth, controller = new AbortController();
   const root = document.getElementById("app");
   const pushApi = "https://rci-push-astmacary-16343.azurewebsites.net/api/push/";
@@ -612,6 +612,7 @@
         `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.site && !state.loading && state.view === "today" ? notifications() : ""}${state.loading ? "" : !state.site ? empty("The connection is not ready. Pull down to refresh.") : (views[state.view] || today)()}`}
       </main>${account && !wide ? tabBar() : ""}`;
     if (typeof document.querySelector === "function") { headerPhoto(); hydratePhotos(); }
+    if (account) { try { localStorage.setItem("rci-marriage-view", JSON.stringify({ view: state.view, coupleId: state.coupleId || null })); } catch {} }
   }
   window.renderLive = render;
   // Pull down at the top of any page to refresh (same as RCI Security).
