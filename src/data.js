@@ -15,11 +15,30 @@
     catch { return ""; }
   };
   const validate = data => {
-    if (!data || data.version !== 1 || !["prompt-answer", "check-in", "journal-entry", "rsvp"].includes(data.kind))
+    if (!data || data.version !== 1 || !["prompt-answer", "check-in", "journal-entry", "rsvp", "sealed-note"].includes(data.kind))
       throw new Error("Please refresh the app before saving.");
     if (JSON.stringify(data).length > 24000) throw new Error("Please shorten your response before saving.");
     return data;
   };
+  const ministryDay = (date = new Date()) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(date);
+    const get = type => parts.find(part => part.type === type).value;
+    return [get("year"), get("month"), get("day")].join("-");
+  };
+  const weekStart = day => {
+    const date = new Date(day + "T00:00:00Z");
+    date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7);
+    return date.toISOString().slice(0, 10);
+  };
+  const goals = [
+    { key: "spiritual", label: "Spiritual", date: "2027-01-25" },
+    { key: "relational", label: "Relational", date: "2027-01-26" },
+    { key: "practical", label: "Practical", date: "2027-01-27" }
+  ];
+  const events = ["retreat", "harvest"];
+  const instant = value => typeof value === "string" && /(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? Date.parse(value) : NaN;
   // SharePoint date-only columns: write noon UTC so the day never shifts; read back as YYYY-MM-DD.
   const toDate = day => day ? `${day}T12:00:00Z` : null;
   const fromDate = value => value ? String(value).slice(0, 10) : "";
@@ -42,8 +61,10 @@
         journalItemId: f.JournalItemId || old.journalItemId };
     }
     if (key === "answers") return { ...old,
+      kind: old.kind || (f.PromptDate ? "prompt-answer" : undefined),
       date: f.PromptDate ? fromDate(f.PromptDate) : old.date, answer: f.Answer ?? old.answer };
     if (key === "checkins") return { ...old,
+      kind: old.kind || (f.WeekOf ? "check-in" : undefined),
       date: f.WeekOf ? fromDate(f.WeekOf) : old.date,
       ratings: f.Connected != null ? [f.Connected, f.Heard, f.Spiritual, f.Fun] : old.ratings,
       need: f.Need ?? old.need, saw: f.SawInYou ?? old.saw,
@@ -78,7 +99,16 @@
     const i = emails.indexOf(String(email || "").toLowerCase());
     return i === 1 ? "spouse2" : i === 0 ? "spouse1" : "";
   };
-  const api = { shared, side, parse, own, escape, safeLink, validate, read, columns, toDate, fromDate };
+  const monthlyRelease = month => {
+    if (!/^2027-(0[1-9]|1[0-2])$/.test(month)) return NaN;
+    const [year, number] = month.split("-").map(Number);
+    const last = new Date(Date.UTC(year, number, 0, 12));
+    const offset = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", timeZoneName: "longOffset"
+    }).formatToParts(last).find(part => part.type === "timeZoneName").value.slice(3);
+    return Date.parse(last.toISOString().slice(0, 10) + "T23:59:00" + offset);
+  };
+  const api = { monthlyRelease, ministryDay, weekStart, goals, events, instant, shared, side, parse, own, escape, safeLink, validate, read, columns, toDate, fromDate };
   root.RCIData = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof window === "undefined" ? globalThis : window);

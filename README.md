@@ -32,11 +32,12 @@ Live features in this release:
 - Published prompts/resources read from Monthly Content.
 - Private prompt answers and check-ins saved through Microsoft Graph to their author-only lists.
 - Shared notes read and written only on the signed-in couple's permissioned journal folder, with conflict detection.
-- Leader record counts and links for Couples, Participation, RSVPs and Monthly Content. The leader view never queries private writing.
+- Weekly participation by branch and spouse, using only roster and status records. The leader view never queries private writing.
+- Union Goals, Our Orchard, encrypted sealed notes and retreat/Harvest RSVPs. See [Pilot setup](PILOT.md) for the private sync job and SharePoint configuration required to activate them.
 
 Live responses are never saved to demo local storage or bundled in the app. A denied or failed Microsoft request stays an error; the app never substitutes sample data or claims an unconfirmed write succeeded.
 
-The demo's automatic reveals, sealed-note release, participation rollups, mentor notifications, event registration and orchard progress still need their ministry workflows and live interfaces. They are not simulated as completed in live mode. Shared journal notes are immediately visible to both spouses; private prompt answers/check-ins remain private until the sharing flows are configured.
+Automatic sharing of ordinary answers and check-ins and mentor notifications still require separate ministry workflows. Shared journal notes are immediately visible to both spouses; private prompt answers/check-ins remain private until the sharing flows are configured.
 
 ### SharePoint schema
 
@@ -72,7 +73,7 @@ A separate site from Productions, so marriage data never sits next to other mini
 ### 3. Power Automate flows (run by a ministry service account)
 1. **Reveal Together:** when a Prompt Answer is created, check whether the spouse has answered the same date. If so, copy both answers into the couple's Couple Journal folder and add a Participation row.
 2. **Check-in share:** when a check-in is created, copy it into the couple's folder for the spouse and add a Participation row.
-3. **Sealed notes:** the Jan 29 answers are held back and released into the folder on the Harvest Celebration date.
+3. **Pilot sync:** use the private scheduled job in [Pilot setup](PILOT.md) for encrypted sealed notes, participation, Orchard progress and RSVP projections. Keep sealed rows out of any ordinary Reveal Together flow.
 4. **Mentor heads-up:** when a Mentor Request is created, email or Teams-message the mentor couple "<couple> asked you to reach out", with nothing else.
 5. **New couple setup:** when a Couples row is added, create the couple's folder, give the two spouses access and send guest invitations.
 

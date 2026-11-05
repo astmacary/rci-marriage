@@ -1,0 +1,13 @@
+{
+  "scriptFile": "index.js",
+  "bindings": [
+    {
+      "name": "timer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "0 4-59/5 * * * *",
+      "useMonitor": true,
+      "runOnStartup": false
+    }
+  ]
+}

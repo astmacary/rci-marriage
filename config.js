@@ -9,7 +9,7 @@ window.RCI_CONFIG = Object.freeze({
   sitePath: "/sites/RCIMarriage",
   lists: {
     couples: "Couples", answers: "Prompt Answers", reveals: "Couple Journal",
-    checkins: "Sunday Check-ins", participation: "Participation",
+    checkins: "Sunday Check-ins", pilotIntake: "Pilot Intake", participation: "Participation",
     mentorRequests: "Mentor Requests", content: "Monthly Content", rsvps: "RSVPs"
   }
 });
