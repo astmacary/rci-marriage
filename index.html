@@ -26,7 +26,7 @@
   color-scheme: light;
 }
 :root[data-theme="dark"]{
-  --bg:#040B15; --surface:#0A1726; --ink:#F7F8FA; --muted:#B9C2CE; --line:#18283B; --soft:#122236; --line2:#24384F; --field:#07121F;
+  --bg:#040B15; --surface:#06101D; --ink:#F7F8FA; --muted:#B9C2CE; --line:#18283B; --soft:#122236; --line2:#24384F; --field:#07121F;
   --leaf:#F3F4F6; --on-leaf:#0A2440; --leaf-soft:#122236; --fig:#E4E8EE; --fig-soft:#122236; --gold:#D4A66E; --gold-soft:#1C2A3A;
   --navy:#06101D; --hero:#0C1B2E; --nav:#06101D; --blue:#8DB8E0;
   color-scheme: dark;
@@ -124,6 +124,17 @@ input[type=date]{appearance:none;-webkit-appearance:none;min-height:48px;text-al
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 [hidden]{display:none!important}
+/* dark mode: gold for the current page and highlights, bold only for headings */
+:root[data-theme="dark"] nav.tabs button[aria-current]{color:var(--brand-gold)}
+:root[data-theme="dark"] .card .label,:root[data-theme="dark"] .card h2.label{color:var(--brand-gold)!important}
+:root[data-theme="dark"] .head .eyebrow{color:#D4A66E}
+:root[data-theme="dark"] .card{border-color:#1E2E44}
+:root[data-theme="dark"] .rate span,:root[data-theme="dark"] .tog-check span,:root[data-theme="dark"] .pill-check span{border-color:rgba(196,149,95,.6)}
+:root[data-theme="dark"] main *:not(h1):not(h2):not(h3):not(.label):not(.label *),:root[data-theme="dark"] nav.tabs button{font-weight:400!important}
+:root[data-theme="dark"] .card>b,:root[data-theme="dark"] .person b{font-weight:600!important}
+.rate span{border-width:1px!important}
+.person .face{border-color:var(--brand-gold)!important}
+.pill-check span{border-width:1px!important}
 .theme-toggle svg{width:15px;height:15px}
 nav.tabs button svg{width:28px;height:28px}
 nav.tabs button[data-view="today"] svg,nav.tabs button[data-view="checkin"] svg{width:33px;height:33px;margin:-2px 0 -3px}
@@ -250,7 +261,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "20";
+const APP_VERSION = "21";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -638,7 +649,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=17" defer></script>
-<script src="live.js?v=17" defer></script>
+<script src="src/data.js?v=18" defer></script>
+<script src="live.js?v=18" defer></script>
 </body>
 </html>
