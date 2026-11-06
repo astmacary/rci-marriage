@@ -184,19 +184,34 @@ async function run(log = console.log) {
       });
       const rosterPath = itemPath(couples, roster.Id);
       await privateItem(rosterPath, [...new Set([...leaders, ...spouses.map(person => person.principalId)])].map(id => [id, getRole("Read")]));
-      const folderPath = "web/GetFolderByServerRelativePath(decodedurl='" + encodeURIComponent((rootPath + "/" + leaf).replace(/'/g, "''")) + "')/ListItemAllFields";
-      let folder;
-      try { folder = await sp.call(folderPath); }
-      catch (error) {
-        if (error.status !== 404) throw error;
-        const result = await sp.call(journal + "/AddValidateUpdateItemUsingPath", {
-          listItemCreateInfo: { FolderPath: { DecodedUrl: site.origin + rootPath }, UnderlyingObjectType: 1 },
-          formValues: [{ FieldName: "FileLeafRef", FieldValue: leaf }, { FieldName: "Title", FieldValue: data.name },
-            { FieldName: "AppData", FieldValue: JSON.stringify({ version: 1, onboardingKey: data.key }) }],
-          bNewDocumentUpdate: false
+      const folderPath = name => "web/GetFolderByServerRelativePath(decodedurl='" +
+        encodeURIComponent((rootPath + "/" + name).replace(/'/g, "''")) + "')";
+      const findFolder = async name => {
+        try { return await sp.call(folderPath(name) + "/ListItemAllFields"); }
+        catch (error) { if (error.status !== 404) throw error; return null; }
+      };
+      let folder = await findFolder(leaf);
+      if (!folder?.Id) {
+        let reservedFolder = await findFolder(data.key);
+        if (!reservedFolder?.Id) {
+          try { await sp.call("web/folders", { ServerRelativeUrl: rootPath + "/" + data.key }); }
+          catch (error) { if (error.status !== 409) throw error; }
+          reservedFolder = await findFolder(data.key);
+        }
+        if (!reservedFolder?.Id) throw new Error("The journal folder could not be located after creation");
+        const marker = parse(reservedFolder.AppData).onboardingKey;
+        if (marker !== data.key) {
+          const info = await sp.call(folderPath(data.key) + "?$select=ItemCount");
+          const acl = await sp.call(itemPath(journal, reservedFolder.Id) + "?$select=HasUniqueRoleAssignments");
+          if (reservedFolder.AppData || info.ItemCount !== 0 || acl.HasUniqueRoleAssignments)
+            throw new Review("A journal folder already exists with unexpected data or access");
+        }
+        await sp.merge(itemPath(journal, reservedFolder.Id), {
+          FileLeafRef: leaf, Title: data.name,
+          AppData: JSON.stringify({ version: 1, onboardingKey: data.key })
         });
-        if (result.value?.some(field => field.HasException)) throw new Review("SharePoint rejected the folder name or metadata");
-        folder = await sp.call(folderPath);
+        folder = await findFolder(leaf);
+        if (Number(folder?.Id) !== Number(reservedFolder.Id)) throw new Error("The journal folder rename could not be verified");
       }
       if (parse(folder.AppData).onboardingKey !== data.key) throw new Review("The journal folder name is already in use");
       const folderId = number(folder.Id);
