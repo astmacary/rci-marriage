@@ -386,7 +386,7 @@
   }
   function usSeg(cur) {
     const a = (view, text) => `<button type="button" data-view="${view}" ${cur === view ? 'aria-current="page"' : ""}>${text}</button>`;
-    return `<div class="seg seg4">${a("grow","Grow")}${a("checkin","Check-in")}${a("orchard","Our Orchard")}${a("journal","Journal")}</div>`;
+    return `<div class="seg seg4">${a("grow","Grow")}${a("checkin","Check-in")}${a("journal","Journal")}${a("orchard","Our Orchard")}</div>`;
   }
   function header() {
     const v = state.view, f = currentFruit();
@@ -496,20 +496,27 @@
       + (mf.MonthlyReminder ? `<p class="sp" style="margin:0"><b>Monthly reminder:</b> ${esc(mf.MonthlyReminder.replace(/^remember:\s*/i, ""))}</p>` : "");
     const videoCard = leaderVideo || week1Extra ? panel("Week 1 · Plant", leaderVideo ? 
       `<span class="pill cs-live" data-video-done style="position:absolute;top:10px;right:10px${videoWatched(selected.month, leaderVideo) ? "" : ";display:none"}">Done ✓</span>
-      <div style="font-size:16px;font-weight:700">Leader video</div>
-      <button type="button" class="btn" data-live="watch-leader-video" data-month="${esc(selected.month)}">Watch leader video</button>
+      <div style="font-size:16px;font-weight:700">Devotional Video</div>
+      <button type="button" class="btn" data-live="watch-leader-video" data-month="${esc(selected.month)}">Watch devotional video</button>
       <video controls playsinline preload="none" aria-label="Leader video" style="display:none;width:100%;max-height:420px"></video><p class="sub" role="status"></p>${week1Extra}` : `${tag(0)}${week1Extra}`,
       w === 0 ? now(0) : ' style="position:relative"') : "";
-    return focus + videoCard + (items.map(({item, data}) => `<section class="card"${now(weekOf[data.kind])}>${tag(weekOf[data.kind])}${label(kindLabel[data.kind])}
+    const card1 = ({item, data}) => `<section class="card"${now(weekOf[data.kind])}>${tag(weekOf[data.kind])}${label(kindLabel[data.kind])}
         ${data.kind === "video" ? `<div style="display:flex;gap:12px;align-items:center"><div class="video"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#C4955F"><path d="M8 5v14l11-7z"/></svg></div><div style="font-weight:700">${esc(item.fields.Title)}</div></div>` : `<div style="font-size:16px;font-weight:700">${esc(item.fields.Title)}</div>`}
-        <p class="sub" style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer" style="font-weight:700">Open ${data.kind === "video" ? "video" : "resource"} ›</a>` : ""}</section>`).join("")
-      || (leaderVideo || week1Extra ? "" : panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0))))
-      + (mf.InteractiveActivity || selected ? panel("Week 2 · Water", `${tag(1)}<div style="font-size:16px;font-weight:700">Interactive for couples</div>${mf.InteractiveActivity ? `<div style="line-height:1.5">${paras(mf.InteractiveActivity)}</div>` : empty(selected.water)}
-          <p class="sub" style="font-style:italic;font-size:13px;margin:0">Choose at least one activity to do together this month.</p>`, now(1)) : "")
-      + panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}</div>
+        <p class="sub" style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer" style="font-weight:700">Open ${data.kind === "video" ? "video" : "resource"} ›</a>` : ""}</section>`;
+    const week0 = items.filter(x => weekOf[x.data.kind] === 0).map(card1).join("");
+    const week1Items = items.filter(x => weekOf[x.data.kind] === 1).map(card1).join("");
+    // Weeks open on the month's Sundays: Week 1 on the 1st Sunday, Week 2 on the 2nd, and so on.
+    const sundays = (() => { const { y, m } = parts(), out = []; for (let d = 1; d <= 31; d++) { const dt = new Date(Date.UTC(y, m - 1, d)); if (dt.getUTCMonth() !== m - 1) break; if (dt.getUTCDay() === 0) out.push(dt.toISOString().slice(0, 10)); } return out; })();
+    const opens = i => sundays[i] || sundays[sundays.length - 1];
+    const gate = (i, html) => !html ? "" : day() >= opens(i) ? html
+      : panel(`Week ${i + 1} · ${STEPS[i]}`, `<p class="sub" style="margin:0">Opens Sunday, ${esc(longDate(opens(i)).replace(/, \d{4}$/, ""))}.</p>`);
+    return focus + gate(0, videoCard + (week0 || (leaderVideo || week1Extra ? "" : panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0)))))
+      + gate(1, week1Items + (mf.InteractiveActivity || selected ? panel("Week 2 · Water", `${tag(1)}<div style="font-size:16px;font-weight:700">Interactive for couples</div>${mf.InteractiveActivity ? `<div style="line-height:1.5">${paras(mf.InteractiveActivity)}</div>` : empty(selected.water)}
+          <p class="sub" style="font-style:italic;font-size:13px;margin:0">Choose at least one activity to do together this month.</p>`, now(1)) : ""))
+      + gate(2, panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}</div>
           ${mf.MonthlyPrayer ? `<div><span class="label" style="color:var(--fig)">Monthly prayer</span><div style="line-height:1.5;margin-top:6px">${paras(mf.MonthlyPrayer)}</div></div>` : ""}
-          ${mf.MonthlyDeclaration ? `<div><span class="label" style="color:var(--fig)">Monthly declaration</span><div style="line-height:1.5;margin-top:6px;font-weight:600">${paras(mf.MonthlyDeclaration)}</div></div>` : ""}`, now(2))
-      + panel("Week 4 · Harvest", `${tag(3)}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="gather" class="linkbtn">Open the Gatherings calendar ›</button>`, now(3));
+          ${mf.MonthlyDeclaration ? `<div><span class="label" style="color:var(--fig)">Monthly declaration</span><div style="line-height:1.5;margin-top:6px;font-weight:600">${paras(mf.MonthlyDeclaration)}</div></div>` : ""}`, now(2)))
+      + gate(3, panel("Week 4 · Harvest", `${tag(3)}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="gather" class="linkbtn">Open the Gatherings calendar ›</button>`, now(3)));
   }
   function branch() {
     const couple = profile();
@@ -545,7 +552,7 @@
     if (!state.journal) return card("Our Journal", empty("Your couple profile has not been linked to its private journal folder yet. Ask a ministry administrator to finish setup."));
     const savedEntries = D.parse(state.journal).entries;
     const entries = Array.isArray(savedEntries) ? savedEntries : [];
-    return card("Our shared journal", `<p class="sub">Notes added here are visible immediately to both of you.</p>
+    return card("Our shared journal", `<p class="sub">Notes added here are only visible immediately to both of you.</p>
       ${entries.map(entry=>`<article style="border-top:1px solid var(--line)"><p class="sub">${esc(entry.date)}</p><p style="white-space:pre-wrap">${esc(entry.text)}</p></article>`).join("")}
       <form data-form="journal"><textarea id="journal-note" aria-label="Write a note to each other" placeholder="Write a note to each other…" name="text" maxlength="6000" rows="4" required></textarea><button class="btn" type="submit">Save to our journal</button><p role="status" class="form-status"></p></form>`) + card("All our reveals", sharedList("reveal", 400, "No reveals yet.")) + card("My saved answers", responseList("answers"));
   }
@@ -572,8 +579,7 @@
     }).join("");
     const released = Array.isArray(data.releasedNotes) ? data.releasedNotes : [];
     const notes = released.map(note => `<article><h3>${esc(note.author)} · ${esc(note.month)}</h3><p style="white-space:pre-wrap">${esc(note.text)}</p></article>`).join("");
-    return orchard
-      + card("Our Union Goals for 2027", empty("Your three goals for 2027 are shared with your spouse.")) + goals + sealed();
+    return orchard;
   }
   function sealed() {
     const config = (state.rows.content || []).map(D.parse).find(row => row.kind === "sealed-release" && row.season === "2027");
