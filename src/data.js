@@ -15,7 +15,7 @@
     catch { return ""; }
   };
   const validate = data => {
-    if (!data || data.version !== 1 || !["prompt-answer", "check-in", "journal-entry", "rsvp", "sealed-note"].includes(data.kind))
+    if (!data || data.version !== 1 || !["prompt-answer", "check-in", "journal-entry", "rsvp", "sealed-note", "leader-video-watched"].includes(data.kind))
       throw new Error("Please refresh the app before saving.");
     if (JSON.stringify(data).length > 24000) throw new Error("Please shorten your response before saving.");
     return data;
