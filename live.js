@@ -396,8 +396,8 @@
     if (v === "today") { const n = firstName(); return T(`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}${n ? ", " + n : ""}`, `${fmt({ weekday: "long", month: "long", day: "numeric" })} · Week ${weekIndex() + 1} of 4`); }
     if (v === "calendar") { const p = Object.values(monthPrompts()), c = p.filter(x => x.type === "Check-in").length; return H(`${esc(f[2])} · ${p.length - c} prompts · ${c} check-ins`, `${esc(f[0])} · ${esc(f[1])}`); }
     if (v === "checkin") return T("Sunday Check In", `Your responses will be shared with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}.`, usSeg("checkin"));
-    if (v === "orchard") return T("Our Orchard", "Fills in month by month. Revealed in full at the Harvest Celebration.", usSeg("orchard"));
-    if (v === "journal") return T("Our Journal", "Visible to both of you", usSeg("journal"));
+    if (v === "orchard") return T("Our Orchard", "Fills in automatically month by month.", usSeg("orchard"));
+    if (v === "journal") return T("Our Journal", `Only visible to you and ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}.`, usSeg("journal"));
     if (v === "grow") return T(`${f[1]}, Week by Week`, `${f[0]} · ${f[2]}`, usSeg("grow"));
     if (v === "branch") return T(esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
     if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
@@ -552,7 +552,7 @@
     if (!state.journal) return card("Our Journal", empty("Your couple profile has not been linked to its private journal folder yet. Ask a ministry administrator to finish setup."));
     const savedEntries = D.parse(state.journal).entries;
     const entries = Array.isArray(savedEntries) ? savedEntries : [];
-    return card("Our shared journal", `<p class="sub">Notes added here are only visible immediately to both of you.</p>
+    return card("Our shared journal", `<p class="sub">Notes added here are only visible to the two of you.</p>
       ${entries.map(entry=>`<article style="border-top:1px solid var(--line)"><p class="sub">${esc(entry.date)}</p><p style="white-space:pre-wrap">${esc(entry.text)}</p></article>`).join("")}
       <form data-form="journal"><textarea id="journal-note" aria-label="Write a note to each other" placeholder="Write a note to each other…" name="text" maxlength="6000" rows="4" required></textarea><button class="btn" type="submit">Save to our journal</button><p role="status" class="form-status"></p></form>`) + card("All our reveals", sharedList("reveal", 400, "No reveals yet.")) + card("My saved answers", responseList("answers"));
   }
