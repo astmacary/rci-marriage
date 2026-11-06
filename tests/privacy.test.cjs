@@ -83,7 +83,7 @@ test('leader view requests only its approved lists and the Leader Videos folder'
   assert.equal(folderRequests.length, 1);
   assert.ok(listRequests.length >= 4 && listRequests.length <= 5);
   assert.ok(listRequests.every(({path}) => /\/lists\/(couples|participation|rsvps|content|mentorRequests)\//.test(path)));
-  assert.match(app.root.innerHTML, /Not started · Upload January leader video/);
+  assert.match(app.root.innerHTML, /Upload January leader video/);
   assert.doesNotMatch(app.root.innerHTML, /30 couples|Marcus|Tasha/);
 });
 test('journal reads the couple folder plus the reveal items SharePoint lets this user see', async () => {

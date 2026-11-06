@@ -428,7 +428,7 @@
     const ministry = panel(`The ministry · ${all.length} couple${all.length === 1 ? "" : "s"}`, all.length ? `<div class="avatars big">${all.map(circle).join("")}</div>` : empty("Couples will appear here as they join."));
     const yours = panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div>
       ${mates.length ? `<div class="avatars big">${mates.map(circle).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned.")}
-      <p class="sub">Your Branch is 4–5 couples with a mentor couple. You meet in Grow week (week 3) to share and pray together.</p>`);
+      <p class="sub">Your Branch is 4–5 couples with a mentor couple.</p>`);
     return ministry + yours
       + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc(couple?.mentor || "To be announced")}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p>${state.mentorSent ? `<p class="sub" style="font-weight:600;color:var(--fig)">Request sent. Your mentor couple will reach out.</p>` : `<button class="btn" type="button" data-live="mentor-request">We’d like our mentor couple to reach out</button>`}`);
   }
@@ -612,7 +612,7 @@
         ${label("About us", ";margin-top:6px")}
         <label for="pf-anniv">Anniversary date</label><input id="pf-anniv" type="date" name="anniversary" ${state.profileEdit ? "" : "disabled"} value="${esc(c.anniversary || "")}">
         <span style="font-weight:600">Preferred contact method</span>${pills("contact", c.contact, ["Text", "Call", "Email"])}
-        <span style="font-weight:600">Preferred gathering</span>${pills("gathering", c.gathering, ["In person", "Virtual"])}
+        <span style="font-weight:600">Preferred gathering method</span>${pills("gathering", c.gathering, ["In person", "Virtual"])}
         <p class="form-status sub" role="status" style="margin:0"></p></form>
       <button class="btn ghost" type="button" data-live="signout">Sign out</button>`;
   }
@@ -728,7 +728,7 @@
       const has = uploaded || water || content.some(r => r.kind === kind && String(r.date || "").startsWith(ym));
       const live = has && day() >= ym + (water ? "-08" : "-01");
       if (kind === "video" && !has && !state.videoIssue) {
-        return `<button class="pill cs-none" type="button" data-live="upload-leader-video" data-month="${ym}" aria-label="Not started · Upload ${FRUIT[m - 1][0]} leader video">Not started · Upload</button>`;
+        return `<button class="pill cs-none" type="button" data-live="upload-leader-video" data-month="${ym}" aria-label="Upload ${FRUIT[m - 1][0]} leader video" style="border:0;cursor:pointer">Upload</button>`;
       }
       return `<span class="pill cs-${live ? "live" : has ? "ready" : "none"}">${live ? "Live" : has ? "Ready" : "Not started"}</span>`;
     };
