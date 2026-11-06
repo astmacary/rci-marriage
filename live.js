@@ -221,6 +221,85 @@
         (Array.isArray(data.memberObjectIds) && data.memberObjectIds.includes(oid())) ||
         (Array.isArray(data.memberEmails) && data.memberEmails.some(value => String(value).toLowerCase() === email))));
   }
+  // Match Security's opening celebration and keep the trigger within the signed-in couple.
+  function celebrateOpening() {
+    const couple = profile(), today = day();
+    if (!couple || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+    const monthDay = today.slice(5), year = Number(today.slice(0, 4));
+    const feb28InNonLeapYear = monthDay === "02-28" && new Date(Date.UTC(year, 1, 29)).getUTCMonth() !== 1;
+    const birthday = [couple.birthday1, couple.birthday2].some(date =>
+      date?.slice(5) === monthDay || (feb28InNonLeapYear && date?.slice(5) === "02-29"));
+    const anniversary = couple.anniversary?.slice(5) === monthDay;
+    if (!birthday && !anniversary) return;
+    const key = "rci-marriage:opening-celebration";
+    try { if (localStorage.getItem(key) === today) return; } catch { /* Storage can be unavailable. */ }
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    try { localStorage.setItem(key, today); } catch { /* Still celebrate on this opening. */ }
+    canvas.setAttribute("aria-hidden", "true");
+    canvas.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1000";
+    const scale = Math.min(window.devicePixelRatio || 1, 2);
+    const width = window.innerWidth, height = window.innerHeight;
+    canvas.width = width * scale; canvas.height = height * scale;
+    ctx.scale(scale, scale);
+    document.body.appendChild(canvas);
+
+    const colors = ["#D2B07C", "#BD9863", "#072442", "#FFFFFF", "#1E8A52", "#C62828", "#4A90D9"];
+    const randomColor = () => colors[Math.floor(Math.random() * colors.length)];
+    const bits = anniversary ? Array.from({ length: 160 }, () => ({
+      x: width * (.35 + Math.random() * .3), y: height * .35,
+      vx: (Math.random() - .5) * 16, vy: -Math.random() * 18 - 6,
+      angle: Math.random() * Math.PI, spin: (Math.random() - .5) * .3,
+      size: 6 + Math.random() * 6, color: randomColor()
+    })) : [];
+    const balloons = birthday ? Array.from({ length: 14 }, (_, i) => ({
+      x: width * (.07 + (i + Math.random()) * .86 / 14),
+      y: height + 24 + Math.random() * height * .45,
+      speed: height * (.33 + Math.random() * .15),
+      size: Math.min(18 + Math.random() * 9, width / 11), color: randomColor()
+    })) : [];
+
+    const start = performance.now(), duration = birthday ? 4400 : 3500;
+    let last = start;
+    function frame(now) {
+      const age = now - start;
+      if (age >= duration) { canvas.remove(); return; }
+      const step = Math.min(2, (now - last) / 16.67);
+      last = now;
+      ctx.clearRect(0, 0, width, height);
+      ctx.globalAlpha = Math.min(1, (duration - age) / 850);
+      for (const bit of bits) {
+        bit.vy += .45 * step; bit.x += bit.vx * step; bit.y += bit.vy * step; bit.angle += bit.spin * step;
+        ctx.save();
+        ctx.translate(bit.x, bit.y);
+        ctx.rotate(bit.angle);
+        ctx.fillStyle = bit.color;
+        ctx.fillRect(-bit.size / 2, -bit.size / 2, bit.size, bit.size * .65);
+        ctx.restore();
+      }
+      for (const balloon of balloons) {
+        const x = balloon.x + Math.sin(age / 440 + balloon.x) * 8;
+        const y = balloon.y - balloon.speed * age / 1000;
+        const r = balloon.size;
+        ctx.beginPath();
+        ctx.moveTo(x, y + r);
+        ctx.quadraticCurveTo(x + 8, y + r + 10, x - 3, y + r + 25);
+        ctx.strokeStyle = "#9AA3AE";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(x, y, r * .75, r, 0, 0, Math.PI * 2);
+        ctx.fillStyle = balloon.color;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x - r * .22, y - r * .33, r * .1, r * .2, .4, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,.6)";
+        ctx.fill();
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
   async function loadJournal() {
     delete state.errors.reveals;
     state.journal = null; state.shared = [];
@@ -899,6 +978,6 @@
     auth = new msal.PublicClientApplication({ auth: { clientId: C.clientId, authority: `https://login.microsoftonline.com/${C.tenantId}`, redirectUri: C.redirectUri, navigateToLoginRequestUrl: false }, cache: { cacheLocation: "sessionStorage" } });
     await auth.initialize(); const result = await auth.handleRedirectPromise();
     state.account = result?.account || auth.getAllAccounts().find(account => account.tenantId === C.tenantId) || null;
-    if (state.account) { auth.setActiveAccount(state.account); await checkPush(); await loadView(); }
+    if (state.account) { auth.setActiveAccount(state.account); await checkPush(); await loadView(); celebrateOpening(); }
   } catch (error) { state.message = notice(error); render(); }
 })();
