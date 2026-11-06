@@ -124,6 +124,7 @@ input[type=date]{appearance:none;-webkit-appearance:none;min-height:48px;text-al
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 [hidden]{display:none!important}
+.sp{font-size:14px;line-height:1.45;color:var(--ink)}
 body.signed-out .theme-line{visibility:hidden}
 @media (max-width:640px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.tile{padding:14px!important}.tile b{font-size:26px!important}}
 .logo-link{display:block;flex-shrink:0}
@@ -245,7 +246,7 @@ nav.tabs button[aria-current]{color:var(--fig);font-weight:700}
 .orchard-cell{min-height:92px;border-radius:14px;background:var(--fig-soft);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;color:var(--ink)}
 .orchard-cell.now{border:2px solid var(--brand-gold)}
 .orchard-cell small{font-size:11px;font-weight:600;color:var(--muted)}
-.orchard-cell b{font-size:13px}
+.orchard-cell b{font-size:13px;text-align:center;line-height:1.2}
 .linkbtn{align-self:flex-start;min-height:44px;background:none;border:0;padding:0;color:var(--fig);font:inherit;font-weight:700;cursor:pointer}
 .live-strip{flex-wrap:nowrap}
 .live-strip span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -298,7 +299,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "35";
+const APP_VERSION = "36";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -686,7 +687,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=32" defer></script>
-<script src="live.js?v=32" defer></script>
+<script src="src/data.js?v=33" defer></script>
+<script src="live.js?v=33" defer></script>
 </body>
 </html>

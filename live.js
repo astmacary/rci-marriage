@@ -353,7 +353,7 @@
     return row?.fields || {};
   }
   const lines = text => String(text || "").split(/\n+/).map(x => x.trim()).filter(Boolean);
-  const paras = text => lines(text).map(x => `<p style="margin:0 0 8px;white-space:pre-wrap">${esc(x)}</p>`).join("");
+  const paras = text => lines(text).map(x => `<p class="sp" style="margin:0 0 8px;white-space:pre-wrap">${esc(x)}</p>`).join("");
   function checkinPrompts() {
     const mf = monthFields();
     const rates = lines(mf.SundayCheckIns).filter(x => !/^rate\b/i.test(x)).slice(0, 4);
@@ -395,9 +395,9 @@
     if (!state.account) return T("Welcome");
     if (v === "today") { const n = firstName(); return T(`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}${n ? ", " + n : ""}`, `${fmt({ weekday: "long", month: "long", day: "numeric" })} · Week ${weekIndex() + 1} of 4`); }
     if (v === "calendar") { const p = Object.values(monthPrompts()), c = p.filter(x => x.type === "Check-in").length; return H(`${esc(f[2])} · ${p.length - c} prompts · ${c} check-ins`, `${esc(f[0])} · ${esc(f[1])}`); }
-    if (v === "checkin") return T("Sunday check-in", `Your responses will be shared with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}.`, usSeg("checkin"));
+    if (v === "checkin") return T("Sunday Check In", `Your responses will be shared with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}.`, usSeg("checkin"));
     if (v === "orchard") return T("Our Orchard", "Fills in month by month. Revealed in full at the Harvest Celebration.", usSeg("orchard"));
-    if (v === "journal") return T("Our journal", "Visible to both of you", usSeg("journal"));
+    if (v === "journal") return T("Our Journal", "Visible to both of you", usSeg("journal"));
     if (v === "grow") return T(`${f[1]}, Week by Week`, `${f[0]} · ${f[2]}`, usSeg("grow"));
     if (v === "branch") return T(esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
     if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
@@ -493,7 +493,7 @@
       <div class="rhythm">${STEPS.map((step, i) => `<div class="${i < wk ? "done" : i === wk ? "now" : ""}">${step}${i < wk ? " ✓" : ""}</div>`).join("")}</div></section>`;
     const mf = monthFields(selected?.month || day().slice(0, 7));
     const week1Extra = (mf.MonthlyScripture ? `<div style="font-style:italic;line-height:1.5">${paras(mf.MonthlyScripture)}</div>` : "")
-      + (mf.MonthlyReminder ? `<p style="margin:0;line-height:1.5"><b>Monthly reminder:</b> ${esc(mf.MonthlyReminder.replace(/^remember:\s*/i, ""))}</p>` : "");
+      + (mf.MonthlyReminder ? `<p class="sp" style="margin:0"><b>Monthly reminder:</b> ${esc(mf.MonthlyReminder.replace(/^remember:\s*/i, ""))}</p>` : "");
     const videoCard = leaderVideo || week1Extra ? panel("Week 1 · Plant", leaderVideo ? 
       `<span class="pill cs-live" data-video-done style="position:absolute;top:10px;right:10px${videoWatched(selected.month, leaderVideo) ? "" : ";display:none"}">Done ✓</span>
       <div style="font-size:16px;font-weight:700">Leader video</div>
@@ -541,8 +541,8 @@
       + panel("Our check-ins", sharedList("check-in", 8, "Check-ins you and your spouse save will appear here."));
   }
   function journal() {
-    if (state.errors.couples || state.errors.reveals) return card("Our journal", empty(state.errors.reveals || state.errors.couples));
-    if (!state.journal) return card("Our journal", empty("Your couple profile has not been linked to its private journal folder yet. Ask a ministry administrator to finish setup."));
+    if (state.errors.couples || state.errors.reveals) return card("Our Journal", empty(state.errors.reveals || state.errors.couples));
+    if (!state.journal) return card("Our Journal", empty("Your couple profile has not been linked to its private journal folder yet. Ask a ministry administrator to finish setup."));
     const savedEntries = D.parse(state.journal).entries;
     const entries = Array.isArray(savedEntries) ? savedEntries : [];
     return card("Our shared journal", `<p class="sub">Notes added here are visible immediately to both of you.</p>
