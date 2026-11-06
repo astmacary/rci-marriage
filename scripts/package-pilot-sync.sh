@@ -17,7 +17,7 @@ stage=$(mktemp -d)
 trap 'rm -r "$stage"' EXIT
 mkdir "$stage/scripts" "$stage/src"
 cp -R deploy/pilot-sync/. "$stage/"
-cp scripts/pilot-sync.cjs "$stage/scripts/"
+cp scripts/pilot-sync.cjs scripts/couple-onboarding.cjs "$stage/scripts/"
 cp src/data.js "$stage/src/"
 cd "$stage"
-zip -q -r "$output" host.json PilotSync scripts src
+zip -q -r "$output" host.json PilotSync CoupleOnboarding scripts src

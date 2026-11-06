@@ -10,6 +10,6 @@ window.RCI_CONFIG = Object.freeze({
   lists: {
     couples: "Couples", answers: "Prompt Answers", reveals: "Couple Journal",
     checkins: "Sunday Check-ins", pilotIntake: "Pilot Intake", participation: "Participation",
-    mentorRequests: "Mentor Requests", content: "Monthly Content", rsvps: "RSVPs"
+    mentorRequests: "Mentor Requests", onboarding: "Couple Onboarding", content: "Monthly Content", rsvps: "RSVPs"
   }
 });

@@ -202,6 +202,7 @@
         : state.view === "grow" ? ["content", "couples", "pilotIntake"]
         : ["gather", "sealed"].includes(state.view) ? ["content", "pilotIntake", "couples"] : ["content", "answers", "couples", "pilotIntake"];
       const tasks = needed.map(load);
+      if (state.view === "leaders" && state.lists.onboarding) tasks.push(load("onboarding"));
       await Promise.all(tasks);
       if (["leaders", "grow"].includes(state.view)) loadLeaderVideos();
       if (["today", "checkin", "journal", "orchard", "branch"].includes(state.view)) await loadJournal();
@@ -403,7 +404,7 @@
     if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
     if (v === "gather") return T("Gatherings &amp; Special Dates");
     if (v === "profile") return T(`<span style="display:flex;justify-content:space-between;align-items:center;gap:10px">My Profile<button type="button" class="icon-round" data-view="leaders" aria-label="Leader view" title="Leader view"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="3"/><circle cx="5" cy="10" r="2.2"/><circle cx="19" cy="10" r="2.2"/><path d="M7.5 20v-1.5a4.5 4.5 0 0 1 9 0V20M1.5 20v-1a3.5 3.5 0 0 1 4.6-3.3M22.5 20v-1a3.5 3.5 0 0 0-4.6-3.3"/></svg></button></span>`);
-    if (v === "leaders") return T(`<span class="dash-title">How The Ministry Is Growing</span>`, `<span style="text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--fig)">Leader dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}</span><br><em style="font-size:13px">Participation only, never what couples write.</em>`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
+    if (v === "leaders") return T(`<span style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><span class="dash-title">How The Ministry Is Growing</span>${state.lists.onboarding && !state.loading && !state.errors.onboarding ? button("couple-onboard-open", "+ Add Couple") : ""}</span>`, `<span style="text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--fig)">Leader dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}</span><br><em style="font-size:13px">Participation only, never what couples write.</em>`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
     return H("", "RCI Marriage");
   }
   function today() {
@@ -779,6 +780,42 @@
     await save("pilotIntake", `sealed:${month}`, { version: 1, kind: "sealed-note", season: "2027", month,
       iv: encode(iv), ciphertext: encode(bytes), wrappedKey: encode(wrapped) });
   }
+  function coupleOnboarding() {
+    if (!state.lists.onboarding || state.errors.onboarding) return "";
+    const requests = own("onboarding").map(item => ({ ...D.parse(item), id: Number(item.id) }))
+      .filter(request => request.kind === "couple-onboarding").sort((a, b) => b.id - a.id).slice(0, 6);
+    const statusLabel = { queued: "Queued", processing: "Setting up access", ready: "Ready", blocked: "Needs administrator review" };
+    const status = requests.length ? panel("Recent onboarding requests", requests.map(request =>
+      `<div class="row"><strong>${esc(request.coupleName)}</strong><span class="pill">${esc(statusLabel[request.status] || "Queued")}</span></div>`).join("")
+      + button("couple-onboard-refresh", "Refresh onboarding status")) : "";
+    if (!state.addCouple) return status;
+    const person = (key, name) => `<fieldset style="border:0;margin:0;padding:0;display:grid;gap:7px"><legend>${name}</legend>
+      <label for="new-${key}-name">Full name</label><input id="new-${key}-name" name="${key}Name" required maxlength="120" autocomplete="off">
+      <label for="new-${key}-email">Microsoft sign-in email</label><input id="new-${key}-email" name="${key}Email" type="email" required maxlength="200" autocomplete="off"></fieldset>`;
+    return `<form class="card" data-form="couple-onboarding" style="gap:12px"><h2 style="margin:0">Add a couple</h2>
+      <p class="sub">Use the two existing Microsoft accounts they’ll sign in with. The couple name will be used for their private journal folder.</p>
+      <label for="new-couple-name">Couple name</label><input id="new-couple-name" name="coupleName" required maxlength="120" autocomplete="off">
+      ${person("husband", "Husband")}${person("wife", "Wife")}
+      <div class="row"><button class="btn" type="submit">Save couple</button>${button("couple-onboard-close", "Cancel")}</div><p role="status" class="form-status sub"></p></form>` + status;
+  }
+  async function queueCouple(values) {
+    const clean = key => String(values.get(key) || "").trim();
+    const coupleName = clean("coupleName");
+    const spouses = ["husband", "wife"].map(key => ({ name: clean(key + "Name"), email: clean(key + "Email").toLowerCase() }));
+    if (!coupleName || coupleName.length > 120 || /[\\/:*?"<>|#%\u0000-\u001f]/.test(coupleName) || /[. ]$/.test(coupleName))
+      throw new Error("Enter a couple name without folder punctuation or a trailing period.");
+    if (spouses.some(spouse => !spouse.name || spouse.name.length > 120 || spouse.email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(spouse.email)) || spouses[0].email === spouses[1].email)
+      throw new Error("Enter a full name and a different Microsoft sign-in email for each spouse.");
+    const roster = (state.rows.couples || []).flatMap(item => D.read("couples", item).memberEmails || []).map(email => String(email).toLowerCase());
+    if (spouses.some(spouse => roster.includes(spouse.email))) throw new Error("One of these accounts is already on the marriage roster.");
+    const signature = new TextEncoder().encode(spouses.map(spouse => spouse.email).sort().join("\n"));
+    const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", signature));
+    const Title = "onboard:" + Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+    if (own("onboarding").some(item => item.fields?.Title === Title)) throw new Error("This couple already has an onboarding request.");
+    const fields = { Title, AppData: JSON.stringify({ kind: "couple-onboarding", version: 1, coupleName, spouses, status: "queued" }) };
+    await graph(`${base("onboarding")}/items`, { method: "POST", body: JSON.stringify({ fields }) });
+    await load("onboarding");
+  }
   function leaders() {
     if (state.errors.couples || state.errors.participation) return card("Leader dashboard", empty(state.errors.couples || state.errors.participation));
     const roster = (state.rows.couples || []).map(item => ({ ...D.read("couples", item), id: String(item.id), title: item.fields?.Title || "" }))
@@ -840,7 +877,7 @@
           return `<tr${day().startsWith(ym) ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)} ${y}</b></td><td>${esc(monthFocus(ym)?.focus || f[1])}</td>${cols.map(c => `<td>${cell(m, c[0], y)}</td>`).join("")}</tr>`; }).join("")}${FRUIT.map((f, i) =>
         `<tr${day().startsWith("2027-") && i + 1 === curM ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)} 2027</b></td><td>${esc(monthFocus(`2027-${String(i + 1).padStart(2, "0")}`)?.focus || f[1])}</td>${cols.map(c => `<td>${cell(i + 1, c[0])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
       <p class="sub" style="font-size:13px">${state.videoIssue ? "Leader video folder: " + esc(state.videoIssue) : "Upload each month’s MP4 to the ministry’s leader video Dropbox folder, copy that video’s share link, then tap Add video for the month and paste it."}</p></section>`;
-    return `${tiles}
+    return `${coupleOnboarding()}${tiles}
       <div class="cols"><div class="main">${health}</div><div class="side">${mentor}${signups}</div></div>${schedule}`;
   }
   function render() {
@@ -907,6 +944,11 @@
       if (target.dataset.live === "refresh" && !state.loading) await loadView();
       if (target.dataset.live === "push-check") await checkPush();
       if (target.dataset.live === "push-on") await changePush(true);
+      if (target.dataset.live === "couple-onboard-open" && state.view === "leaders" && state.lists.onboarding && !state.errors.onboarding) {
+        state.addCouple = true; render(); document.getElementById("new-couple-name")?.focus();
+      }
+      if (target.dataset.live === "couple-onboard-close") { state.addCouple = false; render(); }
+      if (target.dataset.live === "couple-onboard-refresh" && state.view === "leaders") { await load("onboarding"); await load("couples"); render(); }
       if (target.dataset.live === "profile-edit") { state.profileEdit = !state.profileEdit; render(); }
       if (target.dataset.live === "mentor-contacted") {
         target.disabled = true;
@@ -952,6 +994,20 @@
     event.preventDefault(); const submit = form.querySelector('[type="submit"]');
     if (submit.disabled) return; submit.disabled = true;
     const status = form.querySelector(".form-status"), values = new FormData(form);
+    if (form.dataset.form === "couple-onboarding") {
+      if (state.view !== "leaders" || !state.lists.onboarding || state.errors.onboarding) return;
+      status.textContent = "Queueing couple setup…";
+      try {
+        await queueCouple(values);
+        state.addCouple = false;
+        state.message = "Couple setup queued. Check the onboarding status before asking them to sign in.";
+        render();
+      } catch (error) {
+        status.textContent = error.status ? notice(error) : error.message;
+        submit.disabled = false;
+      }
+      return;
+    }
     status.textContent = "Saving to SharePoint…";
     try {
       if (form.dataset.form === "answer") await save("answers", `prompt:${values.get("promptId")}:${day()}`, { version: 1, kind: "prompt-answer", promptId: values.get("promptId"), date: day(), answer: values.get("answer") });
