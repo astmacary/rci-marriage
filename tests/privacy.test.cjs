@@ -74,11 +74,16 @@ async function liveHarness({ deniedAnswers = false } = {}) {
   const clickView = async name => listeners.click({ target: { closest: selector => selector === '[data-view]' ? { dataset: { view: name } } : null } });
   return { root, calls, listeners, clickView };
 }
-test('leader view requests only its roster, status and request lists, never private writing', async () => {
+test('leader view requests only its approved lists and the Leader Videos folder', async () => {
   const app = await liveHarness(); app.calls.length = 0;
   await app.clickView('leaders');
-  assert.ok(app.calls.length >= 4 && app.calls.length <= 5);
-  assert.ok(app.calls.every(({path}) => /\/lists\/(couples|participation|rsvps|content|mentorRequests)\//.test(path)));
+  const videoPath = '/sites/site/drive/root:/Leader%20Videos:/children';
+  const folderRequests = app.calls.filter(({path}) => new URL(path).pathname === videoPath);
+  const listRequests = app.calls.filter(call => !folderRequests.includes(call));
+  assert.equal(folderRequests.length, 1);
+  assert.ok(listRequests.length >= 4 && listRequests.length <= 5);
+  assert.ok(listRequests.every(({path}) => /\/lists\/(couples|participation|rsvps|content|mentorRequests)\//.test(path)));
+  assert.match(app.root.innerHTML, /Not started · Upload January leader video/);
   assert.doesNotMatch(app.root.innerHTML, /30 couples|Marcus|Tasha/);
 });
 test('journal reads the couple folder plus the reveal items SharePoint lets this user see', async () => {
