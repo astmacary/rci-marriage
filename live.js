@@ -237,7 +237,7 @@
     if (v === "branch") return T(esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
     if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
     if (v === "gather") return T("Gatherings &amp; Special Dates");
-    if (v === "profile") return T("My Profile");
+    if (v === "profile") return T(`<span style="display:flex;justify-content:space-between;align-items:center;gap:10px">My Profile<button type="button" class="icon-round" data-view="leaders" aria-label="Leader view" title="Leader view"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="3"/><circle cx="5" cy="10" r="2.2"/><circle cx="19" cy="10" r="2.2"/><path d="M7.5 20v-1.5a4.5 4.5 0 0 1 9 0V20M1.5 20v-1a3.5 3.5 0 0 1 4.6-3.3M22.5 20v-1a3.5 3.5 0 0 0-4.6-3.3"/></svg></button></span>`);
     if (v === "leaders") return T(`<span class="dash-title">How The Ministry Is Growing</span>`, `<span style="text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--fig)">Leader dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}</span><br><em style="font-size:13px">Participation only, never what couples write.</em>`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
     return H("", "RCI Marriage");
   }
@@ -513,11 +513,10 @@
     if (!c) return card("Profile", empty("Your couple profile hasn’t been set up yet. Ask a ministry administrator to add you to the Couples list."));
     const two = mySide() === "spouse2", sp = spouseOf(), mine = two ? "Spouse2Photo" : "Spouse1Photo";
     const myPhone = two ? c.phone2 : c.phone1, myBday = two ? c.birthday2 : c.birthday1;
-    const pills = (name, value, opts) => `<div class="pills">${opts.map(o => `<label class="pill-check"><input type="radio" name="${name}" value="${o}" ${value === o ? "checked" : ""}><span>${o}</span></label>`).join("")}</div>`;
+    const pills = (name, value, opts) => `<div class="pills">${opts.map(o => `<label class="pill-check"><input type="radio" name="${name}" value="${o}" ${value === o ? "checked" : ""} ${state.profileEdit ? "" : "disabled"}><span>${o}</span></label>`).join("")}</div>`;
     const cover = c.couplePhoto ? `<img alt="Your couples photo" data-photo="${esc(c.couplePhoto)}" hidden class="cover"><div class="cover cover-empty">Loading photo…</div>`
       : `<div class="cover cover-empty">Add a couples photo</div>`;
-    return `<div style="display:flex;justify-content:flex-end;margin-bottom:-4px"><button type="button" class="icon-round" data-view="leaders" aria-label="Leader view" title="Leader view"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></button></div>
-      <section class="card profile-card">
+    return `<section class="card profile-card">
         <div class="cover-wrap">${cover}<label class="edit-btn cover-edit" for="pf-couple" aria-label="${c.couplePhoto ? "Change couples photo" : "Add couples photo"}">${PENCIL}</label><input id="pf-couple" type="file" accept="image/*" data-field="CouplePhoto" hidden></div>
         <div class="pair">
           <div class="person"><span class="face-wrap">${face(myPhotoChain(), myName(), 92)}<label class="edit-btn face-edit" for="pf-photo" aria-label="Change your photo">${PENCIL}</label></span><b>${esc(myName())}</b><span class="sub">You</span>
@@ -527,12 +526,12 @@
         ${c.anniversary ? `<p class="sub" style="text-align:center;margin:0">💍 Married ${esc(longDate(c.anniversary))}</p>` : ""}
       </section>
       <form data-form="profile" class="card" style="gap:12px;position:relative">${label("About me")}
-        <button class="save-icon" type="submit" aria-label="Save profile" title="Save"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></button>
+        <span class="form-icons"><button class="icon-round${state.profileEdit ? " on" : ""}" type="button" data-live="profile-edit" aria-pressed="${state.profileEdit ? "true" : "false"}" aria-label="${state.profileEdit ? "Stop editing" : "Edit profile"}" title="Edit">${PENCIL}</button><button class="icon-round" type="submit" aria-label="Save profile" title="Save" ${state.profileEdit ? "" : "disabled"}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></button></span>
         <span style="font-size:16px;word-break:break-all;color:var(--muted)">${esc(state.account?.username || "")}</span>
-        <label for="pf-phone">Phone number</label><input id="pf-phone" type="tel" name="phone" maxlength="40" value="${esc(myPhone || "")}" placeholder="(555) 555-5555" autocomplete="tel">
-        <label for="pf-bday">Birthday</label><input id="pf-bday" type="date" name="birthday" value="${esc(myBday || "")}">
+        <label for="pf-phone">Phone number</label><input id="pf-phone" type="tel" name="phone" maxlength="40" ${state.profileEdit ? "" : "disabled"} value="${esc(myPhone || "")}" placeholder="(555) 555-5555" autocomplete="tel">
+        <label for="pf-bday">Birthday</label><input id="pf-bday" type="date" name="birthday" ${state.profileEdit ? "" : "disabled"} value="${esc(myBday || "")}">
         ${label("About us", ";margin-top:6px")}
-        <label for="pf-anniv">Anniversary date</label><input id="pf-anniv" type="date" name="anniversary" value="${esc(c.anniversary || "")}">
+        <label for="pf-anniv">Anniversary date</label><input id="pf-anniv" type="date" name="anniversary" ${state.profileEdit ? "" : "disabled"} value="${esc(c.anniversary || "")}">
         <span style="font-weight:600">Preferred contact method</span>${pills("contact", c.contact, ["Text", "Call", "Email"])}
         <span style="font-weight:600">Preferred gathering</span>${pills("gathering", c.gathering, ["In person", "Virtual"])}
         <p class="form-status sub" role="status" style="margin:0"></p></form>
@@ -621,10 +620,10 @@
     const bar = (n, d) => `<span class="meter"><i style="width:${d ? Math.round(n / d * 100) : 0}%"></i></span>`;
     const tile = (lbl, big, small, hot) => `<div class="tile${hot ? " hot" : ""}"><span class="sub">${lbl}</span><b>${big}</b><span class="sub" style="font-size:13px">${small}</span></div>`;
     const tiles = `<div class="tiles">${tile("Couples enrolled", roster.length, `${branches.length} Branch${branches.length === 1 ? "" : "es"}`)}
-      ${tile(`Took part in ${monthName[0]} so far`, `${tookPart} of ${roster.length}`, "Answered or checked in")}
+      ${tile(`Took part in ${monthName[0]}`, `${tookPart} of ${roster.length}`, "Answered or checked in")}
       ${tile("Retreat interest", going("retreat"), "couples · RSVP’d yes")}
       ${tile("Open mentor requests", open.length, "Reach out within a week", open.length > 0)}</div>`;
-    const health = `<section class="card dash"><h2>Branch health</h2><div class="scroll"><table class="health"><thead><tr><th>Branch</th><th class="hide-sm">Mentor couple</th><th>Sunday <span class="br-sm">Check Ins</span></th><th>Reveal Together</th><th>Status</th></tr></thead><tbody>${branches.map(b => {
+    const health = `<section class="card dash"><h2>Branch health</h2><div class="scroll"><table class="health"><thead><tr><th>Branch</th><th class="hide-sm">Mentor couple</th><th>Sunday <span class="br-sm">Check Ins</span></th><th>Reveal <span class="br-sm">Together</span></th><th>Status</th></tr></thead><tbody>${branches.map(b => {
         const cs = roster.filter(c => (c.branch || "Unassigned") === b), n = cs.length;
         const ci = cs.filter(c => did(week, c, "checkedIn")).length, an = cs.filter(c => did(week, c, "answered")).length;
         const [st, cls] = status(n ? Math.max(ci, an) / n : 0);
@@ -711,6 +710,7 @@
       if (target.dataset.live === "refresh" && !state.loading) await loadView();
       if (target.dataset.live === "push-check") await checkPush();
       if (target.dataset.live === "push-on") await changePush(true);
+      if (target.dataset.live === "profile-edit") { state.profileEdit = !state.profileEdit; render(); }
       if (target.dataset.live === "mentor-contacted") {
         target.disabled = true;
         await graph(`${base("mentorRequests")}/items/${encodeURIComponent(target.dataset.id)}/fields`, { method: "PATCH", body: JSON.stringify({ Status: "Contacted" }) });
@@ -765,7 +765,8 @@
         if (bday && !/^\d{4}-\d{2}-\d{2}$/.test(bday)) throw new Error("Invalid date");
         const n = mySide() === "spouse2" ? "2" : "1";
         await updateCouple({ [`Spouse${n}Phone`]: phone || null, [`Spouse${n}Birthday`]: bday ? D.toDate(bday) : null, AnniversaryDate: anniv ? D.toDate(anniv) : null,
-          PreferredContact: ["Text", "Call", "Email"].includes(contact) ? contact : null, PreferredGathering: ["In person", "Virtual"].includes(gathering) ? gathering : null });
+          PreferredContact: ["Text", "Call", "Email"].includes(contact) ? contact : null,
+          ...(state.profileEdit = false, {}), PreferredGathering: ["In person", "Virtual"].includes(gathering) ? gathering : null });
       }
       if (form.dataset.form === "goal") {
         const goal = D.goals.find(item => item.key === values.get("goal"));

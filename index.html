@@ -145,6 +145,12 @@ tr.cur td{background:var(--gold-soft)}
 .dash-title{font-size:34px}
 .save-icon,.icon-round{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:var(--surface);color:var(--ink);border:1.5px solid var(--line2);box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer;padding:0}
 .save-icon{position:absolute;top:12px;right:12px}
+.form-icons{position:absolute;top:12px;right:12px;display:flex;gap:8px}
+.icon-round[disabled]{opacity:.4;cursor:default}
+.icon-round.on{background:var(--brand-gold);color:var(--navy);border-color:var(--brand-gold)}
+.head h1 .icon-round{flex-shrink:0}
+input:disabled{opacity:.75;cursor:default}
+.pill-check input:disabled+span{cursor:default;opacity:.85}
 :root[data-theme="dark"] .save-icon{border-color:var(--brand-gold);color:var(--brand-gold)}
 @media (max-width:640px){.dash-title{font-size:clamp(18px,5.6vw,24px);white-space:nowrap}.br-sm{display:block}}
 @media (max-width:640px){.hide-sm{display:none}.health th,.health td{padding:9px 6px;font-size:13px}.health .meter{width:44px}.health .meter-row{gap:6px}.dash .scroll{margin:0 -4px}.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tile b{font-size:28px}.cols>.main,.cols>.side{flex-basis:100%}}
@@ -289,7 +295,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "29";
+const APP_VERSION = "30";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -677,7 +683,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=26" defer></script>
-<script src="live.js?v=26" defer></script>
+<script src="src/data.js?v=27" defer></script>
+<script src="live.js?v=27" defer></script>
 </body>
 </html>
