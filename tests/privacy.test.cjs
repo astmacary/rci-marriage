@@ -77,7 +77,7 @@ async function liveHarness({ deniedAnswers = false } = {}) {
 test('leader view requests only its approved lists and the Leader Videos folder', async () => {
   const app = await liveHarness(); app.calls.length = 0;
   await app.clickView('leaders');
-  const videoPath = '/sites/site/drive/root:/Leader%20Videos:/children';
+  const videoPath = '/v1.0/sites/site/drive/root:/Leader%20Videos:/children';
   const folderRequests = app.calls.filter(({path}) => new URL(path).pathname === videoPath);
   const listRequests = app.calls.filter(call => !folderRequests.includes(call));
   assert.equal(folderRequests.length, 1);
