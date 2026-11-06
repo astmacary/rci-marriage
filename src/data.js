@@ -95,7 +95,7 @@
     if (data.kind === "check-in") {
       const r = data.ratings.map(n => (Number.isInteger(n) && n >= 1 && n <= 5) ? n : null);
       return { WeekOf: toDate(data.date), Connected: r[0], Heard: r[1], Spiritual: r[2], Fun: r[3],
-        Need: str(data.need), SawInYou: str(data.saw), MentorRequest: !!data.mentor, CoupleKey: str(coupleKey) };
+        Need: str(data.need), SawInYou: str(data.saw), Summary: str(data.summary), MentorRequest: !!data.mentor, CoupleKey: str(coupleKey) };
     }
     throw new Error("Please refresh the app before saving.");
   };

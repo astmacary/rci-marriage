@@ -346,6 +346,21 @@
   const parts = () => { const [y,m,d] = day().split("-").map(Number); return { y, m, d, date: new Date(Date.UTC(y, m - 1, d)) }; };
   const monthFocus = month => (state.rows.content || []).map(D.parse)
     .find(row => row.kind === "monthly-focus" && row.month === month);
+  // Monthly Content columns on the month's focus row (scripture, prayer, declaration, reminder, activities, check-in prompts).
+  function monthFields(month = day().slice(0, 7)) {
+    const rows = (state.rows.content || []).filter(item => D.parse(item).kind === "monthly-focus");
+    const row = rows.find(item => D.parse(item).month === month) || rows.find(item => String(D.parse(item).month || "").slice(5) === month.slice(5));
+    return row?.fields || {};
+  }
+  const lines = text => String(text || "").split(/\n+/).map(x => x.trim()).filter(Boolean);
+  const paras = text => lines(text).map(x => `<p style="margin:0 0 8px;white-space:pre-wrap">${esc(x)}</p>`).join("");
+  function checkinPrompts() {
+    const mf = monthFields();
+    const rates = lines(mf.SundayCheckIns).filter(x => !/^rate\b/i.test(x)).slice(0, 4);
+    const qs = lines(mf.SundayCheckInQuestions).slice(0, 6);
+    return { rates: rates.length === 4 ? rates : ["Connected", "Heard", "Spiritually together", "Having fun"],
+      qs: qs.length ? qs : ["One thing I need this week", "Where I saw God at work in you"] };
+  }
   function currentFruit() {
     const fallback = FRUIT[parts().m - 1], planned = monthFocus(day().slice(0, 7));
     return planned ? [fallback[0], planned.focus, planned.verse] : fallback;
@@ -476,18 +491,24 @@
     const focus = `<section class="month" aria-label="This month’s focus"><div class="row"><span class="label">${esc(fr[0])} focus</span><span style="font-size:12px;color:#C9D2DD;letter-spacing:.08em">FRUIT OF OUR UNION</span></div>
       <div class="name">${esc(selected?.focus || fr[1])}</div><div style="font-size:15px;line-height:1.4;color:#C9D2DD">${esc(selected?.verse || fr[2])}</div>
       <div class="rhythm">${STEPS.map((step, i) => `<div class="${i < wk ? "done" : i === wk ? "now" : ""}">${step}${i < wk ? " ✓" : ""}</div>`).join("")}</div></section>`;
-    const videoCard = leaderVideo ? panel("Week 1 · Plant",
+    const mf = monthFields(selected?.month || day().slice(0, 7));
+    const week1Extra = (mf.MonthlyScripture ? `<div style="font-style:italic;line-height:1.5">${paras(mf.MonthlyScripture)}</div>` : "")
+      + (mf.MonthlyReminder ? `<p style="margin:0;line-height:1.5"><b>Monthly reminder:</b> ${esc(mf.MonthlyReminder.replace(/^remember:\s*/i, ""))}</p>` : "");
+    const videoCard = leaderVideo || week1Extra ? panel("Week 1 · Plant", leaderVideo ? 
       `<span class="pill cs-live" data-video-done style="position:absolute;top:10px;right:10px${videoWatched(selected.month, leaderVideo) ? "" : ";display:none"}">Done ✓</span>
       <div style="font-size:16px;font-weight:700">Leader video</div>
       <button type="button" class="btn" data-live="watch-leader-video" data-month="${esc(selected.month)}">Watch leader video</button>
-      <video controls playsinline preload="none" aria-label="Leader video" style="display:none;width:100%;max-height:420px"></video><p class="sub" role="status"></p>`,
+      <video controls playsinline preload="none" aria-label="Leader video" style="display:none;width:100%;max-height:420px"></video><p class="sub" role="status"></p>${week1Extra}` : `${tag(0)}${week1Extra}`,
       w === 0 ? now(0) : ' style="position:relative"') : "";
     return focus + videoCard + (items.map(({item, data}) => `<section class="card"${now(weekOf[data.kind])}>${tag(weekOf[data.kind])}${label(kindLabel[data.kind])}
         ${data.kind === "video" ? `<div style="display:flex;gap:12px;align-items:center"><div class="video"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#C4955F"><path d="M8 5v14l11-7z"/></svg></div><div style="font-weight:700">${esc(item.fields.Title)}</div></div>` : `<div style="font-size:16px;font-weight:700">${esc(item.fields.Title)}</div>`}
         <p class="sub" style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer" style="font-weight:700">Open ${data.kind === "video" ? "video" : "resource"} ›</a>` : ""}</section>`).join("")
-      || (leaderVideo ? "" : panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0))))
-      + (selected ? panel("Week 2 · Water", `${tag(1)}<div style="font-size:16px;font-weight:700">Interactive for couples</div>${empty(selected.water)}`, now(1)) : "")
-      + panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}</div>`, now(2))
+      || (leaderVideo || week1Extra ? "" : panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0))))
+      + (mf.InteractiveActivity || selected ? panel("Week 2 · Water", `${tag(1)}<div style="font-size:16px;font-weight:700">Interactive for couples</div>${mf.InteractiveActivity ? `<div style="line-height:1.5">${paras(mf.InteractiveActivity)}</div>` : empty(selected.water)}
+          <p class="sub" style="font-style:italic;font-size:13px;margin:0">Choose at least one activity to do together this month.</p>`, now(1)) : "")
+      + panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}</div>
+          ${mf.MonthlyPrayer ? `<div><span class="label" style="color:var(--fig)">Monthly prayer</span><div style="line-height:1.5;margin-top:6px">${paras(mf.MonthlyPrayer)}</div></div>` : ""}
+          ${mf.MonthlyDeclaration ? `<div><span class="label" style="color:var(--fig)">Monthly declaration</span><div style="line-height:1.5;margin-top:6px;font-weight:600">${paras(mf.MonthlyDeclaration)}</div></div>` : ""}`, now(2))
       + panel("Week 4 · Harvest", `${tag(3)}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="gather" class="linkbtn">Open the Gatherings calendar ›</button>`, now(3));
   }
   function branch() {
@@ -510,11 +531,11 @@
       + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc(couple?.mentor || "To be announced")}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p>${state.mentorSent ? `<p class="sub" style="font-weight:600;color:var(--fig)">Request sent. Your mentor couple will reach out.</p>` : `<button class="btn" type="button" data-live="mentor-request">We’d like our mentor couple to reach out</button>`}`);
   }
   function checkin() {
+    const cp = checkinPrompts();
     return `<form data-form="checkin" style="display:flex;flex-direction:column;gap:12px">
-      <section class="card" style="gap:14px">${label("How we’re doing this week")}<p class="sub" style="font-size:15px;font-weight:600;color:var(--ink)">This week, how much did you feel…</p><p class="sub" style="font-size:13px;margin-top:-8px">1 = not at all, 5 = very</p>
-      ${["Connected", "Heard", "Spiritually together", "Having fun"].map((name, i) => `<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="font-size:15px;font-weight:600;padding:0;margin-bottom:6px">${name}</legend><div class="rates">${[1,2,3,4,5].map(n => `<label class="rate"><input type="radio" name="rating${i}" value="${n}" required><span>${n}</span></label>`).join("")}</div></fieldset>`).join("")}</section>
-      <section class="card"><label for="live-need">One thing I need this week</label><input type="text" id="live-need" name="need" maxlength="6000" placeholder="e.g. a quiet evening, just us">
-      <label for="live-saw" style="margin-top:6px">Where I saw God at work in you</label><input type="text" id="live-saw" name="saw" maxlength="6000" placeholder="e.g. with the kids at bedtime"></section>
+      <section class="card" style="gap:14px">${label("How we’re doing this week")}<p class="sub" style="font-size:15px;font-weight:600;color:var(--ink)">How was this week?</p><p class="sub" style="font-size:13px;margin-top:-8px">1 = not at all, 5 = very</p>
+      ${cp.rates.map((name, i) => `<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="font-size:15px;font-weight:600;padding:0;margin-bottom:6px">${esc(name)}</legend><div class="rates">${[1,2,3,4,5].map(n => `<label class="rate"><input type="radio" name="rating${i}" value="${n}" required><span>${n}</span></label>`).join("")}</div></fieldset>`).join("")}</section>
+      <section class="card" style="gap:12px">${label("This week’s questions")}${cp.qs.map((q, i) => `<label for="live-q${i}">${esc(q)}</label><textarea id="live-q${i}" name="q${i}" maxlength="6000" rows="2"></textarea>`).join("")}</section>
       <section class="card"><label class="tog-check"><input type="checkbox" name="mentor" value="yes"><span>We’d like our mentor couple to reach out</span></label><p class="sub" style="font-size:13px">Optional. Only your mentor couple gets a heads-up, with no details.</p></section>
       <button class="btn" type="submit">Send check-in</button><p role="status" class="form-status sub" style="margin:0"></p></form>`
       + panel("Our check-ins", sharedList("check-in", 8, "Check-ins you and your spouse save will appear here."));
@@ -539,7 +560,7 @@
       const st = months.includes(key) ? "done" : parts().y === 2027 && index + 1 === curMonth ? "now" : "later";
       const fill = st === "done" ? FRUIT_COLOR[index] : st === "now" ? "rgba(196,149,95,.35)" : "none";
       const stroke = st === "done" ? FRUIT_COLOR[index] : st === "now" ? "#C4955F" : "#9AA3AE";
-      return `<div class="orchard-cell${st === "now" ? " now" : ""}" role="img" aria-label="${f[0]}, ${f[1]}, ${st === "done" ? "gathered" : st === "now" ? "in progress" : "not yet"}"><svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="23" r="12" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-dasharray="${st === "done" ? "0" : "3 3"}"/><path d="M20 11c0-4.5 3.5-7 8-7 0 4.5-3.5 7-8 7z" fill="${st === "later" ? "#9AA3AE" : "#C4955F"}"/></svg><small>${f[0].slice(0,3)}</small><b>${f[1]}</b></div>`;
+      return `<div class="orchard-cell${st === "now" ? " now" : ""}" role="img" aria-label="${f[0]}, ${f[1]}, ${st === "done" ? "gathered" : st === "now" ? "in progress" : "not yet"}"><svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="23" r="12" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-dasharray="${st === "done" ? "0" : "3 3"}"/><path d="M20 11c0-4.5 3.5-7 8-7 0 4.5-3.5 7-8 7z" fill="${st === "later" ? "#9AA3AE" : "#C4955F"}"/></svg><small>${f[0].slice(0,3)}</small><b>${esc(monthFocus(key)?.focus || f[1])}</b></div>`;
     }).join("")}</div><p class="sub" style="font-size:13px">A month fills in after either of you answers a prompt or checks in.</p></section>`;
     const goals = D.goals.map(goal => {
       const saved = data.unionGoals?.[goal.key] || "";
@@ -552,8 +573,7 @@
     const released = Array.isArray(data.releasedNotes) ? data.releasedNotes : [];
     const notes = released.map(note => `<article><h3>${esc(note.author)} · ${esc(note.month)}</h3><p style="white-space:pre-wrap">${esc(note.text)}</p></article>`).join("");
     return orchard
-      + card("Our Union Goals for 2027", empty("Your three goals for 2027 are shared with your spouse.")) + goals + sealed()
-      + card("Released notes", notes || empty("Your notes will appear here after the ministry releases them."));
+      + card("Our Union Goals for 2027", empty("Your three goals for 2027 are shared with your spouse.")) + goals + sealed();
   }
   function sealed() {
     const config = (state.rows.content || []).map(D.parse).find(row => row.kind === "sealed-release" && row.season === "2027");
@@ -929,7 +949,13 @@
     status.textContent = "Saving to SharePoint…";
     try {
       if (form.dataset.form === "answer") await save("answers", `prompt:${values.get("promptId")}:${day()}`, { version: 1, kind: "prompt-answer", promptId: values.get("promptId"), date: day(), answer: values.get("answer") });
-      if (form.dataset.form === "checkin") await save("checkins", `check-in:${day()}`, { version: 1, kind: "check-in", date: day(), ratings: [0,1,2,3].map(i=>Number(values.get(`rating${i}`))), need: values.get("need"), saw: values.get("saw"), mentor: values.get("mentor") === "yes" });
+      if (form.dataset.form === "checkin") {
+        const cp = checkinPrompts(), ratings = [0,1,2,3].map(i=>Number(values.get(`rating${i}`)));
+        const answers = cp.qs.map((q, i) => ({ q, a: String(values.get(`q${i}`) || "").trim() }));
+        const summary = [...cp.rates.map((r, i) => `${r}: ${ratings[i] || "-"}/5`), "", ...answers.flatMap(x => [x.q, x.a || "-", ""])].join("\n").trim();
+        await save("checkins", `check-in:${day()}`, { version: 1, kind: "check-in", date: day(), ratings, prompts: cp.rates, answers, summary,
+          need: answers[0]?.a || "", saw: answers[answers.length - 1]?.a || "", mentor: values.get("mentor") === "yes" });
+      }
       if (form.dataset.form === "profile") {
         const anniv = String(values.get("anniversary") || ""), contact = String(values.get("contact") || ""), gathering = String(values.get("gathering") || "");
         if (anniv && !/^\d{4}-\d{2}-\d{2}$/.test(anniv)) throw new Error("Invalid date");
