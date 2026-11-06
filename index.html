@@ -124,6 +124,8 @@ input[type=date]{appearance:none;-webkit-appearance:none;min-height:48px;text-al
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 [hidden]{display:none!important}
+body.signed-out .theme-line{visibility:hidden}
+@media (max-width:640px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.tile{padding:14px!important}.tile b{font-size:26px!important}}
 .logo-link{display:block;flex-shrink:0}
 /* leader dashboard (layout from the demo, RCI Marriage colors) */
 .dash h2{font-family:var(--display);font-size:20px;margin:0}
@@ -181,7 +183,7 @@ nav.tabs button[data-view="today"] svg,nav.tabs button[data-view="checkin"] svg{
 .theme-line{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding-left:12px;border-left:1px solid rgba(196,149,95,.5);min-width:0;align-self:stretch}
 .theme-line b{display:block;font-family:var(--display);font-size:19px;letter-spacing:.08em;line-height:1.2;color:var(--cream);white-space:nowrap}
 .theme-line small{display:block;font-size:14px;color:#D4A66E;letter-spacing:.04em;white-space:nowrap}
-@media (max-width:420px){.brandbar div{padding-left:14px;padding-right:14px}.brand-theme{gap:8px}.brand-theme img{height:40px;width:auto}.theme-line{padding-left:8px;gap:5px}.theme-line b{font-size:16px;letter-spacing:.05em}.theme-line small{font-size:13px}#me-slot .me-btn{width:42px;height:42px}#me-slot .face{width:38px!important;height:38px!important}.theme-toggle{width:30px;height:30px}}
+@media (max-width:420px){.brandbar div{padding-left:14px;padding-right:14px}.brand-theme{gap:8px}.brand-theme img{height:40px;width:auto}.theme-line{padding-left:8px;gap:5px}.theme-line b{font-size:13px;letter-spacing:.05em}.theme-line small{font-size:11px}#me-slot .me-btn{width:42px;height:42px}#me-slot .face{width:38px!important;height:38px!important}.theme-toggle{width:30px;height:30px}}
 #ptr{position:fixed;top:0;left:0;right:0;height:0;overflow:hidden;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:var(--surface);color:var(--muted);font-weight:600;font-size:13px;border-bottom:1px solid var(--line);transition:height .12s ease;padding-top:env(safe-area-inset-top,0px)}
 #ptr span{padding:0 0 12px}
 #ptr.ready{color:var(--fig)}
@@ -296,7 +298,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "31";
+const APP_VERSION = "32";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -684,7 +686,7 @@ render(); lastView = current();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
-<script src="src/data.js?v=28" defer></script>
-<script src="live.js?v=28" defer></script>
+<script src="src/data.js?v=29" defer></script>
+<script src="live.js?v=29" defer></script>
 </body>
 </html>

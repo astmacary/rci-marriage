@@ -378,13 +378,13 @@
     const v = state.view, f = currentFruit();
     const T = (title, below = "", seg = "") => `<header class="head"><h1>${title}</h1>${below ? `<div class="eyebrow" style="font-weight:400">${below}</div>` : ""}${seg}</header>`;
     const H = (eyebrow, title, top = "") => top ? `<header class="head">${top}<h1 style="margin-top:6px">${title}</h1>${eyebrow ? `<div class="eyebrow" style="font-weight:400">${eyebrow}</div>` : ""}</header>` : `<header class="head">${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ""}<h1>${title}</h1></header>`;
-    if (!state.account) return H("Fruit of Our Union · 2027", "Welcome");
+    if (!state.account) return T("Welcome");
     if (v === "today") { const n = firstName(); return T(`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}${n ? ", " + n : ""}`, `${fmt({ weekday: "long", month: "long", day: "numeric" })} · Week ${weekIndex() + 1} of 4`); }
     if (v === "calendar") { const p = Object.values(monthPrompts()), c = p.filter(x => x.type === "Check-in").length; return H(`${esc(f[2])} · ${p.length - c} prompts · ${c} check-ins`, `${esc(f[0])} · ${esc(f[1])}`); }
     if (v === "checkin") return T("Sunday check-in", `Your responses will be shared with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}.`, usSeg("checkin"));
     if (v === "orchard") return T("Our Orchard", "Fills in month by month. Revealed in full at the Harvest Celebration.", usSeg("orchard"));
     if (v === "journal") return T("Our journal", "Visible to both of you", usSeg("journal"));
-    if (v === "grow") return T(`${f[1]}, week by week`, `${f[0]} · ${f[2]}`, usSeg("grow"));
+    if (v === "grow") return T(`${f[1]}, Week by Week`, `${f[0]} · ${f[2]}`, usSeg("grow"));
     if (v === "branch") return T(esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
     if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
     if (v === "gather") return T("Gatherings &amp; Special Dates");
@@ -798,10 +798,10 @@
     const events = [["harvest", "Harvest Celebration"], ["retreat", "Marriage Retreat"]];
     const signups = `<section class="card dash"><h2>Sign-ups</h2>${state.errors.rsvps ? empty(state.errors.rsvps) : events.map(([k, name]) => `<div class="signup"><div class="row"><b>${name}</b><span>${going(k)} going</span></div>${bar(going(k), roster.length)}</div>`).join("")}</section>`;
     const content = (state.rows.content || []).map(item => D.read("content", item));
-    const cols = [["video", "Leader video"], ["devotional", "Devotional"]];
+    const cols = [["video", "Leader Video"], ["devotional", "Devotional"]];
     const curM = Number(month.slice(5));
-    const cell = (m, kind) => {
-      const ym = `2027-${String(m).padStart(2, "0")}`;
+    const cell = (m, kind, y = 2027) => {
+      const ym = `${y}-${String(m).padStart(2, "0")}`;
       const water = kind === "challenge" && monthFocus(ym)?.water;
       const uploaded = kind === "video" && state.leaderVideos?.[ym];
       const has = uploaded || water || content.some(r => r.kind === kind && String(r.date || "").startsWith(ym));
@@ -811,9 +811,10 @@
       }
       return `<span class="pill cs-${live ? "live" : has ? "ready" : "none"}">${live ? "Live" : has ? "Ready" : "Not started"}</span>`;
     };
-    const schedule = `<section class="card dash"><div class="row" style="flex-wrap:wrap"><h2>Content schedule · 2027</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill cs-live">Live</span><span class="pill cs-ready">Ready</span><span class="pill cs-none">Not started</span></span></div>
-      <div class="scroll"><table><thead><tr><th>Month</th><th>Fruit</th>${cols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${FRUIT.map((f, i) =>
-        `<tr${day().startsWith("2027-") && i + 1 === curM ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)}</b></td><td>${esc(monthFocus(`2027-${String(i + 1).padStart(2, "0")}`)?.focus || f[1])}</td>${cols.map(c => `<td>${cell(i + 1, c[0])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    const schedule = `<section class="card dash"><div class="row" style="flex-wrap:wrap"><h2>Content schedule</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill cs-live">Live</span><span class="pill cs-ready">Ready</span><span class="pill cs-none">Not started</span></span></div>
+      <div class="scroll"><table><thead><tr><th>Month</th><th>Fruit</th>${cols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${[[11, 2026], [12, 2026]].map(([m, y]) => { const f = FRUIT[m - 1], ym = `${y}-${m}`;
+          return `<tr${day().startsWith(ym) ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)} ${y}</b></td><td>${esc(monthFocus(ym)?.focus || f[1])}</td>${cols.map(c => `<td>${cell(m, c[0], y)}</td>`).join("")}</tr>`; }).join("")}${FRUIT.map((f, i) =>
+        `<tr${day().startsWith("2027-") && i + 1 === curM ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)} 2027</b></td><td>${esc(monthFocus(`2027-${String(i + 1).padStart(2, "0")}`)?.focus || f[1])}</td>${cols.map(c => `<td>${cell(i + 1, c[0])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
       <input id="leader-video-file" type="file" accept="video/mp4,.mp4" hidden>
       <p class="sub" style="font-size:13px">${state.videoIssue ? "Leader video folder: " + esc(state.videoIssue) : "Use Upload to add an MP4 up to 250 MB to SharePoint for that month."}</p></section>`;
     return `${tiles}
@@ -825,10 +826,10 @@
     const bar = document.getElementById("brandbar"); if (bar && bar !== root) bar.className = "brandbar" + (wide ? " wide" : "");
     const views = { couple: coupleView, profile: profileView, calendar, today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders };
     root.innerHTML = header() + `<main>
-      ${!account ? card("Sign in", `<p class="sub">Sign in with your church Microsoft account to open your ministry data. The sign-in screen uses the shared RCI Productions registration.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}<a href="?demo=1">Explore the sample demo</a>`) :
+      ${!account ? card("Sign in", `<p class="sub">Sign in with your provided email address. A “Sign in with Microsoft” screen is to be expected.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}`) :
         `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.site && !state.loading && state.view === "today" ? notifications() : ""}${state.loading ? "" : !state.site ? empty("The connection is not ready. Pull down to refresh.") : (views[state.view] || today)()}`}
       </main>${account && !wide ? tabBar() : ""}`;
-    if (typeof document.querySelector === "function") { headerPhoto(); hydratePhotos(); }
+    if (typeof document.querySelector === "function") { headerPhoto(); hydratePhotos(); document.body?.classList.toggle("signed-out", !account); }
     if (account) { try { localStorage.setItem("rci-marriage-view", JSON.stringify({ view: state.view, coupleId: state.coupleId || null })); } catch {} }
   }
   window.renderLive = render;
