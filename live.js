@@ -117,29 +117,29 @@
     try { state.rows[key] = await rows(key); }
     catch (error) { state.rows[key] = []; state.errors[key] = notice(error); }
   }
-  const videoFolder = () => `sites/${state.site.id}/drive/root:/Leader%20Videos`;
-  const isVideoMonth = value => /^2027-(0[1-9]|1[0-2])$/.test(value);
-  const videoRevision = item => item?.cTag || item?.eTag || item?.lastModifiedDateTime;
-  async function loadLeaderVideos() {
+  // Leader videos live in the ministry's Dropbox folder. Each month's video is a Dropbox share link
+  // saved as a "Video" row in Monthly Content (dated the 1st of that month).
+  const isVideoMonth = value => /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+  const videoRevision = item => item?.eTag || item?.lastModifiedDateTime || item?.id;
+  const dropboxLink = value => { try { const u = new URL(String(value).trim()); return u.protocol === "https:" && /(^|\.)dropbox\.com$/i.test(u.hostname) ? u : null; } catch { return null; } };
+  const dropboxRaw = value => { const u = dropboxLink(value); if (!u) return ""; u.searchParams.delete("dl"); u.searchParams.set("raw", "1"); return u.href; };
+  function loadLeaderVideos() {
     state.leaderVideos = {};
     state.videoIssue = "";
-    try {
-      const files = await pages(videoFolder() + ":/children?$select=id,name,file,cTag,eTag,lastModifiedDateTime");
-      for (const file of files) {
-        const month = /^(.+)\.mp4$/i.exec(file.name || "")?.[1];
-        if (file.file && isVideoMonth(month) && videoRevision(file)) state.leaderVideos[month] = file;
-      }
-    } catch (error) { state.videoIssue = notice(error); }
-  }
-  async function uploadLeaderVideo(month, file) {
-    if (!isVideoMonth(month) || !/\.mp4$/i.test(file.name) || !file.size || file.size > 250000000) {
-      throw new Error("Choose an MP4 video up to 250 MB.");
+    for (const item of state.rows.content || []) {
+      const data = D.read("content", item), month = String(data.date || "").slice(0, 7);
+      if (data.kind === "video" && isVideoMonth(month) && dropboxLink(data.url))
+        state.leaderVideos[month] = { id: String(item.id), url: data.url, eTag: item.eTag, lastModifiedDateTime: item.lastModifiedDateTime };
     }
-    if (state.videoIssue || state.leaderVideos?.[month]) throw new Error("Refresh the content schedule before uploading.");
-    const item = await graph(`${videoFolder()}/${month}.mp4:/content?@microsoft.graph.conflictBehavior=fail`,
-      { method: "PUT", headers: { "Content-Type": "video/mp4" }, body: file });
-    if (!item?.file || !videoRevision(item)) throw new Error("Refresh to confirm the upload in SharePoint.");
-    state.leaderVideos[month] = item;
+  }
+  async function addLeaderVideo(month, link) {
+    if (!isVideoMonth(month)) throw new Error("Pick a month first.");
+    if (!dropboxLink(link)) throw new Error("Paste a Dropbox share link for the video (it starts with https://www.dropbox.com/).");
+    if (state.leaderVideos?.[month]) throw new Error("This month already has a leader video.");
+    const [y, m] = month.split("-").map(Number);
+    await graph(`${base("content")}/items`, { method: "POST", body: JSON.stringify({ fields: {
+      Title: `${FRUIT[m - 1][0]} ${y} leader video`, Kind: "Video", PromptDate: D.toDate(month + "-01"), Link: dropboxLink(link).href } }) });
+    await load("content"); loadLeaderVideos();
   }
   const watchedTitle = month => `watched-video:${month}`;
   function videoWatched(month, item) {
@@ -160,9 +160,8 @@
     button.disabled = true;
     status.textContent = "Opening video…";
     try {
-      const meta = await graph(`sites/${state.site.id}/drive/items/${encodeURIComponent(item.id)}`);
-      const src = D.safeLink(meta["@microsoft.graph.downloadUrl"]);
-      if (!src || videoRevision(meta) !== videoRevision(item)) throw new Error("Video changed");
+      const src = D.safeLink(dropboxRaw(item.url));
+      if (!src) throw new Error("Video link missing");
       video.src = src;
       video.style.display = "block";
       status.textContent = "";
@@ -203,8 +202,8 @@
         : state.view === "grow" ? ["content", "couples", "pilotIntake"]
         : ["gather", "sealed"].includes(state.view) ? ["content", "pilotIntake", "couples"] : ["content", "answers", "couples", "pilotIntake"];
       const tasks = needed.map(load);
-      if (["leaders", "grow"].includes(state.view)) tasks.push(loadLeaderVideos());
       await Promise.all(tasks);
+      if (["leaders", "grow"].includes(state.view)) loadLeaderVideos();
       if (["today", "checkin", "journal", "orchard", "branch"].includes(state.view)) await loadJournal();
     } catch (error) { state.message = notice(error); }
     state.loading = false; render();
@@ -807,7 +806,7 @@
       const has = uploaded || water || content.some(r => r.kind === kind && String(r.date || "").startsWith(ym));
       const live = has && day() >= ym + (water ? "-08" : "-01");
       if (kind === "video" && !has && !state.videoIssue) {
-        return `<button class="pill cs-none" type="button" data-live="upload-leader-video" data-month="${ym}" aria-label="Upload ${FRUIT[m - 1][0]} leader video" style="border:0;cursor:pointer">Upload</button>`;
+        return `<button class="pill cs-none" type="button" data-live="upload-leader-video" data-month="${ym}" aria-label="Add ${FRUIT[m - 1][0]} leader video" style="border:0;cursor:pointer">Add video</button>`;
       }
       return `<span class="pill cs-${live ? "live" : has ? "ready" : "none"}">${live ? "Live" : has ? "Ready" : "Not started"}</span>`;
     };
@@ -815,8 +814,7 @@
       <div class="scroll"><table><thead><tr><th>Month</th><th>Fruit</th>${cols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${[[11, 2026], [12, 2026]].map(([m, y]) => { const f = FRUIT[m - 1], ym = `${y}-${m}`;
           return `<tr${day().startsWith(ym) ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)} ${y}</b></td><td>${esc(monthFocus(ym)?.focus || f[1])}</td>${cols.map(c => `<td>${cell(m, c[0], y)}</td>`).join("")}</tr>`; }).join("")}${FRUIT.map((f, i) =>
         `<tr${day().startsWith("2027-") && i + 1 === curM ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)} 2027</b></td><td>${esc(monthFocus(`2027-${String(i + 1).padStart(2, "0")}`)?.focus || f[1])}</td>${cols.map(c => `<td>${cell(i + 1, c[0])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-      <input id="leader-video-file" type="file" accept="video/mp4,.mp4" hidden>
-      <p class="sub" style="font-size:13px">${state.videoIssue ? "Leader video folder: " + esc(state.videoIssue) : "Use Upload to add an MP4 up to 250 MB to SharePoint for that month."}</p></section>`;
+      <p class="sub" style="font-size:13px">${state.videoIssue ? "Leader video folder: " + esc(state.videoIssue) : "Upload each month’s MP4 to the ministry’s leader video Dropbox folder, copy that video’s share link, then tap Add video for the month and paste it."}</p></section>`;
     return `${tiles}
       <div class="cols"><div class="main">${health}</div><div class="side">${mentor}${signups}</div></div>${schedule}`;
   }
@@ -871,8 +869,12 @@
     const target = event.target.closest("[data-live]"); if (!target) return;
     if (target.dataset.live === "watch-leader-video") { await startLeaderVideo(target); return; }
     if (target.dataset.live === "upload-leader-video" && state.view === "leaders" && !state.videoUploading) {
-      const input = document.getElementById("leader-video-file");
-      if (input) { input.dataset.month = target.dataset.month; input.click(); }
+      const link = typeof prompt === "function" ? prompt(`Paste the Dropbox share link for the ${target.dataset.month} leader video`) : "";
+      if (!link) return;
+      state.videoUploading = true; state.message = "Saving the video link…"; render();
+      try { await addLeaderVideo(target.dataset.month, link); state.message = "Leader video added."; }
+      catch (error) { state.message = error.status ? "Couldn’t save the video link. " + notice(error) : error.message; }
+      finally { state.videoUploading = false; render(); }
       return;
     }
     try {
@@ -914,16 +916,6 @@
   });
   document.addEventListener("change", async event => {
     const input = event.target;
-    if (input.id === "leader-video-file" && input.files?.[0] && !state.videoUploading && state.view === "leaders") {
-      const file = input.files[0], month = input.dataset.month;
-      state.videoUploading = true; state.message = "Uploading video to SharePoint…"; render();
-      try { await uploadLeaderVideo(month, file); state.message = "Leader video uploaded to SharePoint."; }
-      catch (error) {
-        if ([409, 412].includes(error.status)) { await loadLeaderVideos(); state.message = "This month already has a video. The existing file was kept."; }
-        else state.message = error.status ? "Couldn’t upload the video. " + notice(error) : error.message;
-      } finally { state.videoUploading = false; render(); }
-      return;
-    }
     if (!["pf-photo", "pf-couple"].includes(input.id) || !input.files?.[0]) return;
     state.message = "Uploading photo…"; render();
     try { await uploadPhoto(input.dataset.field, input.files[0]); photos.clear(); state.message = "Photo updated."; }
