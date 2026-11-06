@@ -117,6 +117,76 @@
     try { state.rows[key] = await rows(key); }
     catch (error) { state.rows[key] = []; state.errors[key] = notice(error); }
   }
+  const videoFolder = () => `sites/${state.site.id}/drive/root:/Leader%20Videos`;
+  const isVideoMonth = value => /^2027-(0[1-9]|1[0-2])$/.test(value);
+  const videoRevision = item => item?.cTag || item?.eTag || item?.lastModifiedDateTime;
+  async function loadLeaderVideos() {
+    state.leaderVideos = {};
+    state.videoIssue = "";
+    try {
+      const files = await pages(videoFolder() + ":/children?$select=id,name,file,cTag,eTag,lastModifiedDateTime");
+      for (const file of files) {
+        const month = /^(.+)\.mp4$/i.exec(file.name || "")?.[1];
+        if (file.file && isVideoMonth(month) && videoRevision(file)) state.leaderVideos[month] = file;
+      }
+    } catch (error) { state.videoIssue = notice(error); }
+  }
+  async function uploadLeaderVideo(month, file) {
+    if (!isVideoMonth(month) || !/\.mp4$/i.test(file.name) || !file.size || file.size > 250000000) {
+      throw new Error("Choose an MP4 video up to 250 MB.");
+    }
+    if (state.videoIssue || state.leaderVideos?.[month]) throw new Error("Refresh the content schedule before uploading.");
+    const item = await graph(`${videoFolder()}/${month}.mp4:/content?@microsoft.graph.conflictBehavior=fail`,
+      { method: "PUT", headers: { "Content-Type": "video/mp4" }, body: file });
+    if (!item?.file || !videoRevision(item)) throw new Error("Refresh to confirm the upload in SharePoint.");
+    state.leaderVideos[month] = item;
+  }
+  const watchedTitle = month => `watched-video:${month}`;
+  function videoWatched(month, item) {
+    return own("pilotIntake").some(row => row.fields?.Title === watchedTitle(month) && D.parse(row).revision === videoRevision(item));
+  }
+  function watchedEnough(video) {
+    const { duration, played } = video;
+    if (!Number.isFinite(duration) || duration <= 0) return false;
+    let watched = 0;
+    for (let i = 0; i < played.length; i++) watched += played.end(i) - played.start(i);
+    return watched >= duration * 0.95;
+  }
+  async function startLeaderVideo(button) {
+    const month = button.dataset.month, item = state.leaderVideos?.[month];
+    if (!item) return;
+    const card = button.closest("section");
+    const video = card.querySelector("video"), status = card.querySelector("[role=status]");
+    button.disabled = true;
+    status.textContent = "Opening video…";
+    try {
+      const meta = await graph(`sites/${state.site.id}/drive/items/${encodeURIComponent(item.id)}`);
+      const src = D.safeLink(meta["@microsoft.graph.downloadUrl"]);
+      if (!src || videoRevision(meta) !== videoRevision(item)) throw new Error("Video changed");
+      video.src = src;
+      video.style.display = "block";
+      status.textContent = "";
+      video.addEventListener("error", () => {
+        status.textContent = "The video couldn’t play. Try opening it again."; button.disabled = false; button.style.display = "";
+      }, { once: true });
+      button.style.display = "none";
+      video.addEventListener("ended", async () => {
+        if (videoWatched(month, item)) return;
+        if (!watchedEnough(video)) { status.textContent = "Watch the full video to mark it done."; return; }
+        if (card.dataset.saving) return;
+        card.dataset.saving = "true";
+        try {
+          await save("pilotIntake", watchedTitle(month), { version: 1, kind: "leader-video-watched", month, revision: videoRevision(item) });
+          if (!videoWatched(month, item)) throw new Error("Completion could not be confirmed");
+          card.querySelector("[data-video-done]").style.display = "";
+          status.textContent = "";
+        } catch { status.textContent = "The video finished, but your Done status couldn’t be saved. Refresh and try again."; }
+        finally { delete card.dataset.saving; }
+      });
+      await video.play().catch(() => { status.textContent = "Press play to watch."; });
+    } catch (error) { status.textContent = error.status === 403 ? notice(error) : "Couldn’t open the video. Refresh and try again."; }
+    finally { button.disabled = false; }
+  }
   async function loadView() {
     state.loading = true; render();
     try {
@@ -130,9 +200,11 @@
         : state.view === "journal" ? ["couples", "answers"]
         : state.view === "orchard" ? ["couples", "content", "pilotIntake"]
         : ["branch", "couple"].includes(state.view) ? ["couples"]
-        : state.view === "grow" ? ["content", "couples"]
+        : state.view === "grow" ? ["content", "couples", "pilotIntake"]
         : ["gather", "sealed"].includes(state.view) ? ["content", "pilotIntake", "couples"] : ["content", "answers", "couples", "pilotIntake"];
-      await Promise.all(needed.map(load));
+      const tasks = needed.map(load);
+      if (["leaders", "grow"].includes(state.view)) tasks.push(loadLeaderVideos());
+      await Promise.all(tasks);
       if (["today", "checkin", "journal", "orchard", "branch"].includes(state.view)) await loadJournal();
     } catch (error) { state.message = notice(error); }
     state.loading = false; render();
@@ -312,7 +384,8 @@
     const currentMonth = day().slice(0, 7);
     const selected = schedule.find(data => data.month === currentMonth)
       || schedule.find(data => data.month.slice(5) === currentMonth.slice(5)) || schedule[0];
-    const items = content.filter(({data}) => order.includes(data.kind) &&
+    const leaderVideo = state.leaderVideos?.[selected?.month];
+    const items = content.filter(({data}) => order.includes(data.kind) && !(leaderVideo && data.kind === "video") &&
       (!selected || (data.kind !== "challenge" && (!data.date || data.date.startsWith(selected.month + "-")))))
       .sort((a, b) => order.indexOf(a.data.kind) - order.indexOf(b.data.kind));
     const w = !selected || selected.month === currentMonth ? weekIndex() : -1;
@@ -326,10 +399,16 @@
     const focus = `<section class="month" aria-label="This month’s focus"><div class="row"><span class="label">${esc(fr[0])} focus</span><span style="font-size:12px;color:#C9D2DD;letter-spacing:.08em">FRUIT OF OUR UNION</span></div>
       <div class="name">${esc(selected?.focus || fr[1])}</div><div style="font-size:15px;line-height:1.4;color:#C9D2DD">${esc(selected?.verse || fr[2])}</div>
       <div class="rhythm">${STEPS.map((step, i) => `<div class="${i < wk ? "done" : i === wk ? "now" : ""}">${step}${i < wk ? " ✓" : ""}</div>`).join("")}</div></section>`;
-    return focus + (items.map(({item, data}) => `<section class="card"${now(weekOf[data.kind])}>${tag(weekOf[data.kind])}${label(kindLabel[data.kind])}
+    const videoCard = leaderVideo ? panel("Week 1 · Plant",
+      `<span class="pill cs-live" data-video-done style="position:absolute;top:10px;right:10px${videoWatched(selected.month, leaderVideo) ? "" : ";display:none"}">Done ✓</span>
+      <div style="font-size:16px;font-weight:700">Leader video</div>
+      <button type="button" class="btn" data-live="watch-leader-video" data-month="${esc(selected.month)}">Watch leader video</button>
+      <video controls playsinline preload="none" aria-label="Leader video" style="display:none;width:100%;max-height:420px"></video><p class="sub" role="status"></p>`,
+      w === 0 ? now(0) : ' style="position:relative"') : "";
+    return focus + videoCard + (items.map(({item, data}) => `<section class="card"${now(weekOf[data.kind])}>${tag(weekOf[data.kind])}${label(kindLabel[data.kind])}
         ${data.kind === "video" ? `<div style="display:flex;gap:12px;align-items:center"><div class="video"><svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="#C4955F"><path d="M8 5v14l11-7z"/></svg></div><div style="font-weight:700">${esc(item.fields.Title)}</div></div>` : `<div style="font-size:16px;font-weight:700">${esc(item.fields.Title)}</div>`}
         <p class="sub" style="white-space:pre-wrap">${esc(data.text)}</p>${D.safeLink(data.url) ? `<a href="${esc(D.safeLink(data.url))}" target="_blank" rel="noopener noreferrer" style="font-weight:700">Open ${data.kind === "video" ? "video" : "resource"} ›</a>` : ""}</section>`).join("")
-      || panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0)))
+      || (leaderVideo ? "" : panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0))))
       + (selected ? panel("Week 2 · Water", `${tag(1)}<div style="font-size:16px;font-weight:700">Interactive for couples</div>${empty(selected.water)}`, now(1)) : "")
       + panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}</div>`, now(2))
       + panel("Week 4 · Harvest", `${tag(3)}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="gather" class="linkbtn">Open the Gatherings calendar ›</button>`, now(3));
@@ -645,14 +724,19 @@
     const cell = (m, kind) => {
       const ym = `2027-${String(m).padStart(2, "0")}`;
       const water = kind === "challenge" && monthFocus(ym)?.water;
-      const has = water || content.some(r => r.kind === kind && String(r.date || "").startsWith(ym));
+      const uploaded = kind === "video" && state.leaderVideos?.[ym];
+      const has = uploaded || water || content.some(r => r.kind === kind && String(r.date || "").startsWith(ym));
       const live = has && day() >= ym + (water ? "-08" : "-01");
+      if (kind === "video" && !has && !state.videoIssue) {
+        return `<button class="pill cs-none" type="button" data-live="upload-leader-video" data-month="${ym}" aria-label="Not started · Upload ${FRUIT[m - 1][0]} leader video">Not started · Upload</button>`;
+      }
       return `<span class="pill cs-${live ? "live" : has ? "ready" : "none"}">${live ? "Live" : has ? "Ready" : "Not started"}</span>`;
     };
     const schedule = `<section class="card dash"><div class="row" style="flex-wrap:wrap"><h2>Content schedule · 2027</h2><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill cs-live">Live</span><span class="pill cs-ready">Ready</span><span class="pill cs-none">Not started</span></span></div>
       <div class="scroll"><table><thead><tr><th>Month</th><th>Fruit</th>${cols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>${FRUIT.map((f, i) =>
         `<tr${day().startsWith("2027-") && i + 1 === curM ? ' class="cur"' : ""}><td><b>${f[0].slice(0, 3)}</b></td><td>${esc(monthFocus(`2027-${String(i + 1).padStart(2, "0")}`)?.focus || f[1])}</td>${cols.map(c => `<td>${cell(i + 1, c[0])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-      <p class="sub" style="font-size:13px">“Ready” means it’s in Monthly Content with a date that hasn’t arrived yet.</p></section>`;
+      <input id="leader-video-file" type="file" accept="video/mp4,.mp4" hidden>
+      <p class="sub" style="font-size:13px">${state.videoIssue ? "Leader video folder: " + esc(state.videoIssue) : "Use Upload to add an MP4 up to 250 MB to SharePoint for that month."}</p></section>`;
     return `${tiles}
       <div class="cols"><div class="main">${health}</div><div class="side">${mentor}${signups}</div></div>${schedule}`;
   }
@@ -705,6 +789,12 @@
     const view = event.target.closest("[data-view]");
     if (view && !state.loading) { if (view.dataset.view === "gather") state.gcal = null; state.view = view.dataset.view; state.message = ""; await loadView(); return; }
     const target = event.target.closest("[data-live]"); if (!target) return;
+    if (target.dataset.live === "watch-leader-video") { await startLeaderVideo(target); return; }
+    if (target.dataset.live === "upload-leader-video" && state.view === "leaders" && !state.videoUploading) {
+      const input = document.getElementById("leader-video-file");
+      if (input) { input.dataset.month = target.dataset.month; input.click(); }
+      return;
+    }
     try {
       if (target.dataset.live === "signin") await auth.loginRedirect({ scopes, redirectUri: C.redirectUri });
       if (target.dataset.live === "refresh" && !state.loading) await loadView();
@@ -743,7 +833,18 @@
     render();
   });
   document.addEventListener("change", async event => {
-    const input = event.target; if (!["pf-photo", "pf-couple"].includes(input.id) || !input.files?.[0]) return;
+    const input = event.target;
+    if (input.id === "leader-video-file" && input.files?.[0] && !state.videoUploading && state.view === "leaders") {
+      const file = input.files[0], month = input.dataset.month;
+      state.videoUploading = true; state.message = "Uploading video to SharePoint…"; render();
+      try { await uploadLeaderVideo(month, file); state.message = "Leader video uploaded to SharePoint."; }
+      catch (error) {
+        if ([409, 412].includes(error.status)) { await loadLeaderVideos(); state.message = "This month already has a video. The existing file was kept."; }
+        else state.message = error.status ? "Couldn’t upload the video. " + notice(error) : error.message;
+      } finally { state.videoUploading = false; render(); }
+      return;
+    }
+    if (!["pf-photo", "pf-couple"].includes(input.id) || !input.files?.[0]) return;
     state.message = "Uploading photo…"; render();
     try { await uploadPhoto(input.dataset.field, input.files[0]); photos.clear(); state.message = "Photo updated."; }
     catch (error) { state.message = "Couldn’t update the photo. " + notice(error); }
