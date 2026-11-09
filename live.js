@@ -720,8 +720,14 @@
         <p class="form-status sub" role="status" style="margin:0"></p></form>
       <button class="btn ghost" type="button" data-live="signout">Sign out</button>`;
   }
+  const HEIC_MESSAGE = "HEIC photos can’t be uploaded. Please choose a JPG or PNG. On iPhone, go to Settings → Camera → Formats and pick “Most Compatible,” or take a screenshot of the photo and upload that.";
+  function photoError(text) { const error = new Error(text); error.userMessage = text; return error; }
+  function isHeic(file) {
+    const type = String(file?.type || "").toLowerCase(), name = String(file?.name || "").toLowerCase();
+    return /^image\/hei[cf](-sequence)?$/.test(type) || /\.hei[cf]$/.test(name);
+  }
   async function resizeImage(file, max = 800) {
-    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(photoError("We couldn’t read that photo. Please choose a JPG or PNG photo and try again.")); i.src = URL.createObjectURL(file); });
     const k = Math.min(1, max / Math.max(img.width, img.height));
     const cv = document.createElement("canvas"); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
     cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
@@ -735,6 +741,7 @@
   async function uploadPhoto(field, file) {
     const c = profile(); if (!c?.itemId || !["Spouse1Photo", "Spouse2Photo", "CouplePhoto"].includes(field)) throw new Error("Invalid photo");
     if (field !== "CouplePhoto" && field !== (mySide() === "spouse2" ? "Spouse2Photo" : "Spouse1Photo")) throw new Error("Invalid photo");
+    if (isHeic(file)) throw photoError(HEIC_MESSAGE);
     const blob = await resizeImage(file, field === "CouplePhoto" ? 1400 : 800);
     const fileName = `couple_${c.itemId}_${field}_${Date.now()}.jpg`;
     const up = await graph(`sites/${state.site.id}/lists/${encodeURIComponent("Site Assets")}/drive/root:/Lists/${encodeURIComponent(state.lists.couples)}/${fileName}:/content`,
@@ -986,7 +993,8 @@
     if (!["pf-photo", "pf-couple"].includes(input.id) || !input.files?.[0]) return;
     state.message = "Uploading photo…"; render();
     try { await uploadPhoto(input.dataset.field, input.files[0]); photos.clear(); state.message = "Photo updated."; }
-    catch (error) { state.message = "Couldn’t update the photo. " + notice(error); }
+    catch (error) { state.message = error.userMessage || "Couldn’t update the photo. " + notice(error); }
+    input.value = "";
     render();
   });
   document.addEventListener("submit", async event => {
