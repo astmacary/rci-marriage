@@ -63,7 +63,7 @@
     sheet.innerHTML = '<div class="sm-grab" aria-hidden="true"></div><div class="sm-head"><h2>RCI Serve</h2><button type="button" class="sm-x" aria-label="Close">' + svg('<path d="M18 6 6 18M6 6l12 12"/>') + '</button></div>' +
       row("/", "#0B1D33", GRID, "RCI Serve", n ? n + (n === 1 ? " request" : " requests") + " on your teams" : "All Teams Home", '<span>' + svg('<path d="m9 6 6 6-6 6"/>') + '</span>', "sm-home") +
       (teams ? '<div class="sm-label">Your teams</div>' + teams : "") +
-      '<div class="sm-label">Your ministries</div>' + row("/rci-marriage/", "#9C3D5A", RINGS, "Marriage", "You're here", '<span>' + svg('<path d="M20 6 9 17l-5-5"/>', 20) + '</span>', "sm-here");
+      '<div class="sm-label">Your ministries</div>' + row("/rci-marriage/", "#B8864B", RINGS, "Marriage", "You're here", '<span>' + svg('<path d="M20 6 9 17l-5-5"/>', 20) + '</span>', "sm-here");
     sheet.querySelector(".sm-x").addEventListener("click", close);
     sheet.addEventListener("keydown", function(ev){ if (ev.key === "Escape") close(); });
     document.body.appendChild(back); document.body.appendChild(sheet);
