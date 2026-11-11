@@ -398,7 +398,7 @@
     if (v === "branch") return T(esc(profile()?.branch ? profile().branch + " Branch" : "Branch"));
     if (v === "couple") { const c = (state.rows.couples || []).find(item => String(item.id) === String(state.coupleId)); return T(esc(c?.fields?.Title || "Couple")); }
     if (v === "gather") return T("Gatherings &amp; Special Dates");
-    if (v === "profile") return T(`<span style="display:flex;justify-content:space-between;align-items:center;gap:10px">My Profile${isMentor(myCouple()) ? `<button type="button" class="icon-round" data-view="mentor" aria-label="Mentor dashboard" title="Mentor dashboard" style="margin-left:auto;font-size:18px;color:var(--fig)">★</button>` : ""}<button type="button" class="icon-round" data-view="leaders" aria-label="Leader view" title="Leader view"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="3"/><circle cx="5" cy="10" r="2.2"/><circle cx="19" cy="10" r="2.2"/><path d="M7.5 20v-1.5a4.5 4.5 0 0 1 9 0V20M1.5 20v-1a3.5 3.5 0 0 1 4.6-3.3M22.5 20v-1a3.5 3.5 0 0 0-4.6-3.3"/></svg></button></span>`);
+    if (v === "profile") return T(`<span style="display:flex;justify-content:space-between;align-items:center;gap:10px">My Profile${isMentor(myCouple()) || isLeader() ? `<button type="button" class="icon-round" data-view="mentor" aria-label="Mentor dashboard" title="Mentor dashboard" style="margin-left:auto;font-size:18px;color:var(--fig)">★</button>` : ""}${isLeader() ? `<button type="button" class="icon-round" data-view="leaders" aria-label="Leader view" title="Leader view"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="3"/><circle cx="5" cy="10" r="2.2"/><circle cx="19" cy="10" r="2.2"/><path d="M7.5 20v-1.5a4.5 4.5 0 0 1 9 0V20M1.5 20v-1a3.5 3.5 0 0 1 4.6-3.3M22.5 20v-1a3.5 3.5 0 0 0-4.6-3.3"/></svg></button>` : ""}</span>`);
     if (v === "mentor") return T(`<span class="dash-title">How ${esc(myCouple()?.branch || "Your Branch")} Is Growing</span>`, `<span style="text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--fig)">Mentor dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}</span><br><em style="font-size:13px">Participation only, never what couples write.</em>`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
     if (v === "leaders") return T(`<span style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px"><span class="dash-title">How The Ministry Is Growing</span>${state.lists.onboarding && !state.loading && !state.errors.onboarding ? button("couple-onboard-open", "+ Add Couple") : ""}</span>`, `<span style="text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--fig)">Leader dashboard · ${esc(fmt({ month: "long", year: "numeric" }))} · ${esc(f[1])}</span><br><em style="font-size:13px">Participation only, never what couples write.</em>`, `<button type="button" class="linkbtn" data-view="profile" style="color:var(--cream);min-height:32px">‹ Back to couple view</button>`);
     return H("", "RCI Marriage");
@@ -522,34 +522,53 @@
     const initials = c => [c.spouse1Name, c.spouse2Name].map(n => String(n || "?").trim()[0] || "?").join("&");
     const names = c => [c.spouse1Name, c.spouse2Name].map(n => String(n || "").split(/\s+/)[0]).filter(Boolean).join(" & ") || "Couple";
     const mine = couple?.coupleKey;
-    const mates = couple?.branch ? (state.rows.couples || []).map(item => D.read("couples", item)).filter(c => c.kind === "couple" && c.active !== false && c.branch === couple.branch)
+    const branchNames = [...new Set(allCouples().map(c => c.branch).filter(Boolean))].sort();
+    const viewing = isLeader() ? (state.branchView ?? "all") : (couple?.branch || "");
+    const mates = viewing ? (state.rows.couples || []).map(item => D.read("couples", item)).filter(c => c.kind === "couple" && c.active !== false && (viewing === "all" || c.branch === viewing))
       .sort((a, b) => (b.coupleKey === mine) - (a.coupleKey === mine)) : [];
     const all = (state.rows.couples || []).map(item => D.read("couples", item)).filter(c => c.kind === "couple" && c.active !== false)
       .sort((a, b) => (b.coupleKey === mine) - (a.coupleKey === mine) || names(a).localeCompare(names(b)));
     const mentorIds = new Set(allCouples().filter(isMentor).map(m => m.itemId));
-    const circle = c => `<button type="button" class="av-btn${c.coupleKey === mine ? " me" : ""}" data-couple="${esc(c.itemId)}">${mentorIds.has(c.itemId) ? STAR : ""}<span><img alt="" data-photo="${esc(c.couplePhoto || "")}" hidden><b>${esc(initials(c))}</b></span>${c.coupleKey === mine ? "You" : esc(names(c))}</button>`;
+    const circle = c => `<button type="button" class="av-btn${c.coupleKey === mine ? " me" : ""}${mentorIds.has(c.itemId) ? " mentor" : ""}" data-couple="${esc(c.itemId)}">${mentorIds.has(c.itemId) ? STAR : ""}<span><img alt="" data-photo="${esc(c.couplePhoto || "")}" hidden><b>${esc(initials(c))}</b></span>${c.coupleKey === mine ? "You" : esc(names(c))}</button>`;
     const ministry = panel(`The ministry · ${all.length} couple${all.length === 1 ? "" : "s"}`, all.length ? `<div class="avatars big">${all.map(circle).join("")}</div>` : empty("Couples will appear here as they join."));
-    const yours = panel("Your Branch", `<div style="font-size:16px;font-weight:700">${esc(couple?.branch ? couple.branch + " Branch" : "Branch not assigned yet")}</div>
+    const picker = isLeader() ? `<label for="branch-view" class="sub">Viewing</label><select id="branch-view"><option value="all"${viewing === "all" ? " selected" : ""}>All Branches</option>${branchNames.map(b => `<option value="${esc(b)}"${viewing === b ? " selected" : ""}>${esc(b)}</option>`).join("")}</select>` : "";
+    const yours = panel(isLeader() ? "Branches" : "Your Branch", `${picker}<div style="font-size:16px;font-weight:700">${esc(viewing === "all" ? "All Branches" : viewing ? viewing + " Branch" : "Branch not assigned yet")}</div>
       ${mates.length ? `<div class="avatars big">${mates.map(circle).join("")}</div>` : empty("Your Branch couples will appear here once you’re assigned.")}
       <p class="sub">Your Branch is 4–5 couples with a mentor couple.</p>`);
     return ministry + yours
-      + messagesCard(couple)
+      + messagesCard(viewing)
       + panel("Your mentor couple", `<div style="font-size:16px;font-weight:700">${esc((() => { const full = allCouples().find(x => x.itemId === couple?.itemId); const m = full && mentorOf(full); return m ? pairNameOf(m) : "To be announced"; })())}</div><p class="sub">Want to talk something through? Tick “We’d like our mentor couple to reach out” on your Sunday check-in. Only they get a heads-up, with no details.</p>${state.mentorSent ? `<p class="sub" style="font-weight:600;color:var(--fig)">Request sent. Your mentor couple will reach out.</p>` : `<button class="btn" type="button" data-live="mentor-request">We’d like our mentor couple to reach out</button>`}`);
   }
   // Branch messages (like RCI Security): a "Branch Messages" list; the app shows only your Branch's posts.
-  function messagesCard(couple) {
-    if (!state.lists.messages) return "";
-    if (!couple?.branch) return "";
+  const REACTS = [["heart", "❤️"], ["up", "👍"], ["down", "👎"]];
+  function messagesCard(branchName) {
+    if (!state.lists.messages || !branchName) return "";
     if (state.errors.messages) return panel("Branch messages", empty(state.errors.messages));
-    const rows = (state.rows.messages || []).filter(item => String(item.fields?.Branch || "") === String(couple.branch))
-      .sort((a, b) => String(b.createdDateTime || "").localeCompare(String(a.createdDateTime || ""))).slice(0, 30);
+    const all = (state.rows.messages || []).filter(item => branchName === "all" || String(item.fields?.Branch || "") === String(branchName));
+    const tag = item => String(item.fields?.Title || "");
+    const posts = all.filter(item => !/^(reply|react):/.test(tag(item))).sort((a, b) => String(b.createdDateTime || "").localeCompare(String(a.createdDateTime || ""))).slice(0, 30);
     const me = String(state.account?.username || "").toLowerCase();
+    const mineItem = item => String(item.createdBy?.user?.email || "").toLowerCase() === me;
     const when = at => at ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }).format(new Date(at)) : "";
-    return panel(`${esc(couple.branch)} messages`, `<form data-form="branch-message" style="display:flex;flex-direction:column;gap:8px"><textarea name="text" rows="2" maxlength="2000" required aria-label="Write a message to your Branch" placeholder="Write a message to your Branch…"></textarea><button class="btn" type="submit" style="align-self:flex-end">Post</button><p class="form-status sub" role="status" style="margin:0"></p></form>
-      ${rows.map(item => { const f = item.fields || {}, mine = String(item.createdBy?.user?.email || "").toLowerCase() === me;
-        return `<article class="msg-row"><div class="row"><b>${esc(f.AuthorName || item.createdBy?.user?.displayName || "Someone")}</b><span class="sub" style="font-size:12px">${esc(when(item.createdDateTime))}</span></div>
-          <p style="margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(f.Message || "")}</p>${mine ? `<button type="button" class="linkbtn" data-live="delete-message" data-id="${esc(item.id)}" style="font-size:13px;min-height:28px">Delete</button>` : ""}</article>`; }).join("") || empty("No messages yet. Say hello to your Branch.")}
-      <p class="sub" style="font-size:12px;font-style:italic;margin:0">Only couples in your Branch see these messages in the app.</p>`);
+    const who = item => esc(item.fields?.AuthorName || item.createdBy?.user?.displayName || "Someone");
+    const del = item => mineItem(item) ? `<button type="button" class="linkbtn" data-live="delete-message" data-id="${esc(item.id)}" style="font-size:13px;min-height:28px">Delete</button>` : "";
+    const post = item => {
+      const id = String(item.id);
+      const replies = all.filter(x => tag(x) === "reply:" + id).sort((a, b) => String(a.createdDateTime).localeCompare(String(b.createdDateTime)));
+      const reacts = REACTS.map(([k, emo]) => { const r = all.filter(x => tag(x) === `react:${id}:${k}`), mine = r.find(mineItem);
+        return `<button type="button" data-live="react" data-id="${esc(id)}" data-kind="${k}" data-branch="${esc(item.fields?.Branch || "")}" ${mine ? `data-mine="${esc(mine.id)}"` : ""} aria-pressed="${mine ? "true" : "false"}" aria-label="${k === "heart" ? "Heart" : k === "up" ? "Thumbs up" : "Thumbs down"}">${emo}${r.length ? " " + r.length : ""}</button>`; }).join("");
+      return `<article class="msg-row"><div class="row"><b>${who(item)}</b><span class="sub" style="font-size:12px">${branchName === "all" ? esc(item.fields?.Branch || "") + " · " : ""}${esc(when(item.createdDateTime))}</span></div>
+        <p style="margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(item.fields?.Message || "")}</p>
+        <div class="react">${reacts}</div>
+        ${replies.map(r => `<div class="msg-reply"><div class="row"><b style="font-size:14px">${who(r)}</b><span class="sub" style="font-size:12px">${esc(when(r.createdDateTime))}</span></div><p style="margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px">${esc(r.fields?.Message || "")}</p>${del(r)}</div>`).join("")}
+        <details style="margin-top:6px"><summary class="linkbtn" style="font-size:13px;cursor:pointer;min-height:28px">Reply</summary>
+          <form data-form="branch-reply" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"><input type="hidden" name="parent" value="${esc(id)}"><input type="hidden" name="branch" value="${esc(item.fields?.Branch || "")}"><textarea name="text" rows="2" maxlength="2000" required aria-label="Write a reply"></textarea><button class="btn small-btn" type="submit" style="align-self:flex-end">Reply</button><p class="form-status sub" role="status" style="margin:0"></p></form></details>
+        ${del(item)}</article>`;
+    };
+    const canPost = branchName !== "all";
+    return panel(branchName === "all" ? "All Branch messages" : `${esc(branchName)} messages`, `${canPost ? `<form data-form="branch-message" style="display:flex;flex-direction:column;gap:8px"><input type="hidden" name="branch" value="${esc(branchName)}"><textarea name="text" rows="2" maxlength="2000" required aria-label="Write a message to your Branch" placeholder="Write a message to your Branch…"></textarea><button class="btn" type="submit" style="align-self:flex-end">Post</button><p class="form-status sub" role="status" style="margin:0"></p></form>` : `<p class="sub" style="font-size:13px;margin:0">Choose a Branch above to post a message.</p>`}
+      ${posts.map(post).join("") || empty("No messages yet. Say hello to your Branch.")}
+      <p class="sub" style="font-size:12px;font-style:italic;margin:0">Only couples in this Branch see these messages in the app.</p>`);
   }
   function checkin() {
     const cp = checkinPrompts();
@@ -557,9 +576,10 @@
       <section class="card" style="gap:14px">${label("How we’re doing this week")}<p class="sub" style="font-size:15px;font-weight:600;color:var(--ink)">How was this week?</p><p class="sub" style="font-size:13px;margin-top:-8px">1 = not at all, 5 = very</p>
       ${cp.rates.map((name, i) => `<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="font-size:15px;font-weight:600;padding:0;margin-bottom:6px">${esc(name)}</legend><div class="rates">${[1,2,3,4,5].map(n => `<label class="rate"><input type="radio" name="rating${i}" value="${n}" required><span>${n}</span></label>`).join("")}</div></fieldset>`).join("")}</section>
       <section class="card" style="gap:12px">${label("This week’s questions")}${cp.qs.map((q, i) => `<label for="live-q${i}">${esc(q)}</label><textarea id="live-q${i}" name="q${i}" maxlength="6000" rows="2"></textarea>`).join("")}</section>
+      <button class="btn" type="submit">Send check-in</button><p role="status" class="form-status sub" style="margin:0"></p>
       <section class="card"><label class="tog-check"><input type="checkbox" name="mentor" value="yes"><span>We’d like our mentor couple to reach out</span></label><p class="sub" style="font-size:13px">Optional. Only your mentor couple gets a heads-up, with no details.</p></section>
-      <button class="btn" type="submit">Send check-in</button><p role="status" class="form-status sub" style="margin:0"></p></form>`
-      + panel("Our check-ins", sharedList("check-in", 8, "Check-ins you and your spouse save will appear here."));
+      </form>`
+      + panel("Our Check-In History", sharedList("check-in", 8, "Check-ins you and your spouse save will appear here."));
   }
   function journal() {
     if (state.errors.couples || state.errors.reveals) return card("Our Journal", empty(state.errors.reveals || state.errors.couples));
@@ -694,24 +714,53 @@
   const allCouples = () => (state.rows.couples || []).map(item => ({ ...D.read("couples", item), app: D.parse(item), title: item.fields?.Title || "" }))
     .filter(c => c.kind === "couple" && c.active !== false);
   const isMentor = c => !!c?.app?.isMentor;
+  const isLeader = () => (C.leaderIds || []).includes(String(oid() || ""));
+  const leaderCouple = (list = allCouples()) => list.find(c => (c.app?.members || []).some(m => (C.leaderIds || []).includes(String(m.objectId))));
   const emailsOf = c => (c?.memberEmails || []).map(e => String(e).toLowerCase());
-  const mentorOf = (c, list = allCouples()) => { const want = String(c?.mentorCouple || "").toLowerCase().split(/[;,\s]+/).filter(Boolean);
+  const mentorOf = (c, list = allCouples()) => { if (isMentor(c)) { const lc = leaderCouple(list); return lc && lc.itemId !== c.itemId ? lc : null; } const want = String(c?.mentorCouple || "").toLowerCase().split(/[;,\s]+/).filter(Boolean);
     return want.length ? list.find(m => m.itemId !== c.itemId && emailsOf(m).some(e => want.includes(e))) || null : null; };
   const menteesOf = (m, list = allCouples()) => list.filter(c => c.itemId !== m.itemId && mentorOf(c, list)?.itemId === m.itemId);
   const pairNameOf = c => [c?.spouse1Name, c?.spouse2Name].map(n => String(n || "").trim().split(/\s+/)[0]).filter(Boolean).join(" & ") || c?.title || "Couple";
-  const STAR = '<span class="mentor-star" title="Mentor couple" aria-label="Mentor couple">★</span>';
+  const STAR = "";
   // A person's photo: their SharePoint photo, else their Microsoft photo when it's the signed-in person.
   const personChain = (raw, email) => [raw, String(email || "").toLowerCase() === String(state.account?.username || "").toLowerCase() ? "me" : ""].filter(Boolean).join("|");
+  // Gives (or removes) a mentor couple's read access to the lists behind their dashboard numbers.
+  // Uses the SharePoint permission already approved for this app registration (AllSites.FullControl), as RCI Productions does.
+  async function spToken() {
+    const request = { scopes: [`https://${C.siteHost}/AllSites.FullControl`], account: state.account };
+    try { return (await auth.acquireTokenSilent(request)).accessToken; } catch { return (await auth.acquireTokenPopup(request)).accessToken; }
+  }
+  async function sp(path, opts = {}) {
+    const url = new URL(`https://${C.siteHost}${C.sitePath}/_api/${path}`);
+    if (url.hostname !== C.siteHost) throw new Error("Unexpected data destination");
+    const res = await fetch(url, { ...opts, headers: { Authorization: "Bearer " + await spToken(), Accept: "application/json;odata=nometadata", "Content-Type": "application/json;odata=nometadata", ...(opts.headers || {}) } });
+    if (!res.ok) { const body = await res.json().catch(() => null); const e = new Error(body?.["odata.error"]?.message?.value || `SharePoint returned ${res.status}.`); e.status = res.status; throw e; }
+    return res.status === 204 ? null : res.json().catch(() => null);
+  }
+  async function mentorAccess(c, on) {
+    const READ = 1073741826;
+    for (const email of emailsOf(c)) {
+      const user = await sp("web/ensureuser", { method: "POST", body: JSON.stringify({ logonName: `i:0#.f|membership|${email}` }) });
+      for (const key of ["participation", "rsvps", "mentorRequests"]) {
+        const list = `web/lists/getbytitle('${C.lists[key].replace(/'/g, "''")}')`;
+        const info = await sp(`${list}?$select=HasUniqueRoleAssignments`);
+        if (!info?.HasUniqueRoleAssignments) continue; // already inherits site access
+        if (on) await sp(`${list}/roleassignments/addroleassignment(principalid=${user.Id},roledefid=${READ})`, { method: "POST" });
+        else await sp(`${list}/roleassignments/removeroleassignment(principalid=${user.Id},roledefid=${READ})`, { method: "POST" }).catch(() => null);
+      }
+    }
+  }
   async function patchCouple(c, fields) {
     await graph(`${base("couples")}/items/${encodeURIComponent(c.itemId)}/fields`, { method: "PATCH", body: JSON.stringify(fields) });
     await load("couples");
   }
   function leaderControls(c) {
-    if (!state.leaderMode) return "";
+    if (!state.leaderMode || !isLeader()) return "";
     const mentors = allCouples().filter(m => isMentor(m) && m.itemId !== c.itemId), cur = mentorOf(c);
     return `<section class="card" style="gap:10px">${label("Leader tools")}
-      <button type="button" class="btn ghost" data-live="toggle-mentor" data-id="${esc(c.itemId)}" style="align-self:flex-start">${isMentor(c) ? "★ Mentor couple · Remove" : "☆ Mark as mentor couple"}</button>
-      ${isMentor(c) ? "" : `<label for="assign-mentor">Mentor couple</label><div class="row" style="gap:8px"><select id="assign-mentor" style="flex:1">
+      <button type="button" class="btn ghost" data-live="toggle-mentor" data-id="${esc(c.itemId)}" style="align-self:flex-start">${isMentor(c) ? "Mentor couple · Remove" : "Mark as mentor couple"}</button>
+      ${isMentor(c) ? `<label for="mentor-branch">Branch name</label><div class="row" style="gap:8px"><input type="text" id="mentor-branch" maxlength="60" value="${esc(c.branch || "")}" placeholder="e.g. Olive" style="flex:1"><button type="button" class="btn small-btn" data-live="mentor-branch" data-id="${esc(c.itemId)}">Save</button></div>
+        <p class="sub" style="font-size:13px">Saving also moves every couple assigned to them into this Branch.</p>` : `<label for="assign-mentor">Mentor couple</label><div class="row" style="gap:8px"><select id="assign-mentor" style="flex:1">
         <option value="">Not assigned</option>${mentors.map(m => `<option value="${esc(m.itemId)}"${cur?.itemId === m.itemId ? " selected" : ""}>${esc(pairNameOf(m))}${m.branch ? " · " + esc(m.branch) : ""}</option>`).join("")}</select>
         <button type="button" class="btn small-btn" data-live="assign-mentor" data-id="${esc(c.itemId)}">Save</button></div>
         ${mentors.length ? "" : `<p class="sub" style="font-size:13px">Mark a couple as a mentor couple first.</p>`}`}</section>`;
@@ -727,7 +776,9 @@
           <div class="person">${face(personChain(c.photo1, c.memberEmails?.[0]), c.spouse1Name, 92)}<b>${esc(c.spouse1Name || "—")}</b></div>
           <div class="person">${face(personChain(c.photo2, c.memberEmails?.[1]), c.spouse2Name, 92)}<b>${esc(c.spouse2Name || "—")}</b></div>
         </div>
-        ${(() => { const full = allCouples().find(x => x.itemId === c.itemId); return isMentor(full) ? `<p style="text-align:center;margin:0;font-weight:700;color:var(--fig)">★ Mentor couple${c.branch ? " · " + esc(c.branch) : ""}</p>` : ""; })()}
+        ${(() => { const full = allCouples().find(x => x.itemId === c.itemId); const viewerMentor = full && mentorOf(full)?.itemId === myCouple()?.itemId;
+          const icons = (isLeader() || viewerMentor) && (c.contact || c.gathering) ? `<div class="pref-icons">${c.contact ? `<span title="Preferred contact method">${c.contact === "Call" ? "📞" : c.contact === "Email" ? "✉️" : "💬"} ${esc(c.contact)}</span>` : ""}${c.gathering ? `<span title="Preferred gathering method">${c.gathering === "Virtual" ? "💻" : "🤝"} ${esc(c.gathering)}</span>` : ""}</div>` : "";
+          return (isMentor(full) ? `<p style="text-align:center;margin:0;font-weight:700;color:var(--fig)">Mentor couple${c.branch ? " · " + esc(c.branch) : ""}</p>` : "") + icons; })()}
         <p class="sub" style="text-align:center;margin:0">${c.anniversary ? `💍 Anniversary: ${esc(longDate(c.anniversary).replace(/, \d{4}$/, ""))}` : "Anniversary not added yet"}</p>
       </section>` + leaderControls(allCouples().find(x => x.itemId === c.itemId) || c);
   }
@@ -864,17 +915,17 @@
     await graph(`${base("onboarding")}/items`, { method: "POST", body: JSON.stringify({ fields }) });
     await load("onboarding");
   }
-  const leaders = () => dashboard("all");
+  const leaders = () => isLeader() ? dashboard("all") : card("Leader dashboard", empty("The Leader dashboard is only for the ministry leaders."));
   const mentorDash = () => dashboard("mentor");
   const myCouple = () => allCouples().find(c => c.itemId === profile()?.itemId) || null;
   const myBranchCouples = () => { const me = myCouple(); if (!me) return [];
     const ids = new Set(menteesOf(me).map(c => c.itemId));
     return allCouples().filter(c => c.itemId !== me.itemId && (ids.has(c.itemId) || (me.branch && c.branch === me.branch && !isMentor(c)))); };
-  const circleOf = c => `<button type="button" class="av-btn" data-couple="${esc(c.itemId)}">${isMentor(c) ? STAR : ""}<span><img alt="" data-photo="${esc(c.couplePhoto || "")}" hidden><b>${esc([c.spouse1Name, c.spouse2Name].map(n => String(n || "?").trim()[0] || "?").join("&"))}</b></span>${esc(pairNameOf(c))}</button>`;
+  const circleOf = c => `<button type="button" class="av-btn${isMentor(c) ? " mentor" : ""}" data-couple="${esc(c.itemId)}">${isMentor(c) ? STAR : ""}<span><img alt="" data-photo="${esc(c.couplePhoto || "")}" hidden><b>${esc([c.spouse1Name, c.spouse2Name].map(n => String(n || "?").trim()[0] || "?").join("&"))}</b></span>${esc(pairNameOf(c))}</button>`;
   function dashboard(scope) {
     const mentorView = scope === "mentor";
     if (state.errors.couples) return card("Dashboard", empty(state.errors.couples));
-    if (mentorView && !isMentor(myCouple())) return card("Mentor dashboard", empty("This dashboard is for mentor couples."));
+    if (mentorView && !isMentor(myCouple()) && !isLeader()) return card("Mentor dashboard", empty("This dashboard is for mentor couples."));
     const everyone = allCouples();
     const roster = (mentorView ? myBranchCouples() : everyone).map(c => ({ ...c, id: String(c.itemId) }));
     const parts = (state.rows.participation || []).map(D.parse).filter(r => r.kind === "participation");
@@ -945,12 +996,11 @@
       ${state.errors.participation ? card("Participation", empty(state.errors.participation)) : ""}${tiles}
       <div class="cols"><div class="main">${perCouple}</div><div class="side">${mentor}${signups}</div></div>`;
     const mentors = everyone.filter(isMentor), unassigned = everyone.filter(c => !isMentor(c) && !mentorOf(c, everyone));
-    const mentorCard = `<section class="card dash"><h2>Mentor couples · ${mentors.length}</h2>${mentors.map(m => `<div class="req"><div><b>★ ${esc(pairNameOf(m))}</b><span class="sub">${esc(m.branch || "No Branch")} · ${menteesOf(m, everyone).length} couple${menteesOf(m, everyone).length === 1 ? "" : "s"}</span></div><button type="button" class="btn ghost small-btn" data-couple="${esc(m.itemId)}">Open</button></div>`).join("") || empty("No mentor couples yet. Open a couple below and tap “Mark as mentor couple.”")}</section>`;
+    const mentorCard = `<section class="card dash"><h2>Mentor couples · ${mentors.length}</h2>${mentors.map(m => `<div class="req"><div><b>${esc(pairNameOf(m))}</b><span class="sub">${esc(m.branch || "No Branch")} · ${menteesOf(m, everyone).length} couple${menteesOf(m, everyone).length === 1 ? "" : "s"}</span></div><button type="button" class="btn ghost small-btn" data-couple="${esc(m.itemId)}">Open</button></div>`).join("") || empty("No mentor couples yet. Open a couple below and tap “Mark as mentor couple.”")}</section>`;
     const unassignedCard = `<section class="card dash"><h2>Not assigned to a mentor · ${unassigned.length}</h2>${unassigned.length ? `<div class="avatars big">${unassigned.map(circleOf).join("")}</div><p class="sub" style="font-size:13px">Tap a couple to assign them to a mentor couple.</p>` : empty("Every couple has a mentor couple.")}</section>`;
     const allCard = `<section class="card dash"><h2>All couples · ${everyone.length}</h2><div class="avatars big">${everyone.map(circleOf).join("")}</div><p class="sub" style="font-size:13px">Tap a couple to mark them as a mentor couple or change their mentor.</p></section>`;
-    return `${coupleOnboarding()}${state.errors.participation ? card("Participation", empty(state.errors.participation)) : ""}${tiles}
-      <div class="cols"><div class="main">${health}</div><div class="side">${mentor}${signups}</div></div>
-      <div class="cols"><div class="main">${unassignedCard}${allCard}</div><div class="side">${mentorCard}</div></div>${schedule}`;
+    return `${coupleOnboarding()}${allCard}${unassignedCard}${mentorCard}${state.errors.participation ? card("Participation", empty(state.errors.participation)) : ""}${tiles}
+      <div class="cols"><div class="main">${health}</div><div class="side">${mentor}${signups}</div></div>${schedule}`;
   }
   function render() {
     const account = state.account, wide = ["leaders", "mentor"].includes(state.view) && !!account;
@@ -1022,19 +1072,37 @@
       if (target.dataset.live === "couple-onboard-close") { state.addCouple = false; render(); }
       if (target.dataset.live === "couple-onboard-refresh" && state.view === "leaders") { await load("onboarding"); await load("couples"); render(); }
       if (target.dataset.live === "profile-edit") { state.profileEdit = !state.profileEdit; render(); }
-      if (target.dataset.live === "toggle-mentor" && state.leaderMode) {
+      if (target.dataset.live === "toggle-mentor" && state.leaderMode && isLeader()) {
         const c = allCouples().find(x => x.itemId === target.dataset.id); if (!c) return;
         target.disabled = true;
-        await patchCouple(c, { AppData: JSON.stringify({ ...c.app, isMentor: !isMentor(c) }) });
-        state.message = isMentor(c) ? "Mentor star removed." : "Marked as a mentor couple."; render();
+        const on = !isMentor(c);
+        await patchCouple(c, { AppData: JSON.stringify({ ...c.app, isMentor: on }) });
+        try { await mentorAccess(c, on); state.message = on ? "Marked as a mentor couple. They can now see their Branch numbers." : "Mentor couple removed, and their dashboard access was taken away."; }
+        catch (error) { state.message = (on ? "Marked as a mentor couple, but their list access couldn’t be set: " : "Removed, but their list access couldn’t be changed: ") + (error.message || notice(error)); }
+        render();
       }
-      if (target.dataset.live === "assign-mentor" && state.leaderMode) {
+      if (target.dataset.live === "mentor-branch" && state.leaderMode && isLeader()) {
+        const c = allCouples().find(x => x.itemId === target.dataset.id), name = String(document.getElementById("mentor-branch")?.value || "").trim().slice(0, 60);
+        if (!c || !name) return;
+        target.disabled = true;
+        for (const m of [c, ...menteesOf(c)]) await graph(`${base("couples")}/items/${encodeURIComponent(m.itemId)}/fields`, { method: "PATCH", body: JSON.stringify({ Branch: name }) });
+        await load("couples"); state.message = `Branch set to ${name}.`; render();
+      }
+      if (target.dataset.live === "assign-mentor" && state.leaderMode && isLeader()) {
         const c = allCouples().find(x => x.itemId === target.dataset.id), sel = document.getElementById("assign-mentor");
         const m = allCouples().find(x => x.itemId === sel?.value);
         if (!c) return;
         target.disabled = true;
         await patchCouple(c, m ? { MentorCouple: emailsOf(m).join(";"), ...(m.branch ? { Branch: m.branch } : {}) } : { MentorCouple: null });
         state.message = m ? `Assigned to ${pairNameOf(m)}.` : "Mentor assignment removed."; render();
+      }
+      if (target.dataset.live === "react") {
+        const b = String(target.dataset.branch || ""), kind = target.dataset.kind, id = String(target.dataset.id || "").replace(/\D/g, "");
+        if (!["heart", "up", "down"].includes(kind) || !id || (!isLeader() && b !== profile()?.branch)) return;
+        target.disabled = true;
+        if (target.dataset.mine) await graph(`${base("messages")}/items/${encodeURIComponent(target.dataset.mine)}`, { method: "DELETE" });
+        else await graph(`${base("messages")}/items`, { method: "POST", body: JSON.stringify({ fields: { Title: `react:${id}:${kind}`, Branch: b, Message: "", AuthorName: myName() } }) });
+        await load("messages"); render();
       }
       if (target.dataset.live === "delete-message") {
         target.disabled = true;
@@ -1068,6 +1136,7 @@
       render();
       return;
     }
+    if (event.target.id === "branch-view" && isLeader()) { state.branchView = event.target.value; render(); return; }
     if (event.target.id !== "leader-week" || !/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) return;
     state.week = D.weekStart(event.target.value);
     render();
@@ -1110,10 +1179,11 @@
         await save("checkins", `check-in:${day()}`, { version: 1, kind: "check-in", date: day(), ratings, prompts: cp.rates, answers, summary,
           need: answers[0]?.a || "", saw: answers[answers.length - 1]?.a || "", mentor: values.get("mentor") === "yes" });
       }
-      if (form.dataset.form === "branch-message") {
-        const c = profile(), text = String(values.get("text") || "").trim().slice(0, 2000);
-        if (!c?.branch || !text) throw new Error("Write a message first.");
-        await graph(`${base("messages")}/items`, { method: "POST", body: JSON.stringify({ fields: { Title: String(c.branch), Branch: String(c.branch), Message: text, AuthorName: myName() } }) });
+      if (form.dataset.form === "branch-message" || form.dataset.form === "branch-reply") {
+        const c = profile(), text = String(values.get("text") || "").trim().slice(0, 2000), b = String(values.get("branch") || "");
+        if (!text || !b || (!isLeader() && b !== c?.branch)) throw new Error("Write a message first.");
+        const parent = form.dataset.form === "branch-reply" ? String(values.get("parent") || "").replace(/\D/g, "") : "";
+        await graph(`${base("messages")}/items`, { method: "POST", body: JSON.stringify({ fields: { Title: parent ? "reply:" + parent : b, Branch: b, Message: text, AuthorName: myName() } }) });
         await load("messages");
       }
       if (form.dataset.form === "profile") {

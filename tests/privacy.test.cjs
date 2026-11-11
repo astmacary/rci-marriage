@@ -54,7 +54,7 @@ async function liveHarness({ deniedAnswers = false } = {}) {
     setActiveAccount() {} async acquireTokenSilent() { return { accessToken: 'test-token' }; }
   }
   const context = vm.createContext({
-    window: { RCI_APP: { DEMO: false }, RCI_CONFIG: { clientId: 'public-id', tenantId: 'tenant', siteHost: 'example.sharepoint.com', sitePath: '/sites/Test', lists: names }, RCIData: D },
+    window: { RCI_APP: { DEMO: false }, RCI_CONFIG: { clientId: 'public-id', tenantId: 'tenant', siteHost: 'example.sharepoint.com', sitePath: '/sites/Test', lists: names, leaderIds: ['person-a'] }, RCIData: D },
     document: { getElementById: () => root, addEventListener: (name, cb) => { listeners[name] = cb; } },
     AbortController, URL, Date, msal: { PublicClientApplication: Auth },
     FormData: class { constructor(form) { return form.values; } },
@@ -136,3 +136,4 @@ test('shared journal items skip the folder, other couples and unknown kinds', ()
   assert.equal(D.side(couple, 'TWO@x.org'), 'spouse2');
   assert.equal(D.side(couple, 'someone@x.org'), '');
 });
+

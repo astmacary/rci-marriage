@@ -26,8 +26,8 @@ Create a SharePoint list named **Branch Messages** on the RCI Marriage site with
 | Message | Multiple lines of text (plain) |
 | AuthorName | Single line of text |
 
-Give couples permission to add items and read items (the app shows each couple only their own Branch's messages, and only lets authors delete their own). Until the list exists, the Branch page simply hides the messages card.
+Replies are saved as items titled `reply:<post id>` and reactions as `react:<post id>:heart|up|down`, so no extra columns are needed. Give couples permission to add items and read items (the app shows each couple only their own Branch's messages, and only lets authors delete their own). Until the list exists, the Branch page simply hides the messages card.
 
 ## Mentor couples
 
-Leaders mark a mentor couple from the Leader dashboard (tap a couple, then "Mark as mentor couple"). This sets `isMentor` in the couple's AppData. Assigning a couple to a mentor sets their **MentorCouple** column to the mentor couple's emails and copies the mentor's **Branch**. Mentor couples see a ★ button on their Profile that opens the Mentor dashboard. Mentors need read access to Participation, RSVPs and Mentor Requests for their dashboard numbers to load.
+Only the people listed in `leaderIds` (config.js, Entra object IDs) can open the Leader dashboard. Leaders mark a mentor couple from the Leader dashboard (tap a couple, then "Mark as mentor couple"). This sets `isMentor` in the couple's AppData and, using the app's approved SharePoint permission, gives both spouses Read access to Participation, RSVPs and Mentor Requests (removed again when unmarked). A mentor couple's own mentor is automatically the leaders' couple. Assigning a couple to a mentor sets their **MentorCouple** column to the mentor couple's emails and copies the mentor's **Branch**. Mentor couples see a ★ button on their Profile that opens the Mentor dashboard. Mentors need read access to Participation, RSVPs and Mentor Requests for their dashboard numbers to load.

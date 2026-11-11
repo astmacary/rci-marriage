@@ -7,6 +7,8 @@ window.RCI_CONFIG = Object.freeze({
   redirectUri: "https://astmacary.github.io/rci-marriage/",
   siteHost: "xb3hc3233xdwtuxk4m6un8xymmy.sharepoint.com",
   sitePath: "/sites/RCIMarriage",
+  // Entra object IDs (not emails) of the ministry leaders who can open the Leader dashboard.
+  leaderIds: ["03cedae8-d903-4a97-aed2-56970713f7dc", "3a2ed4d3-ed6a-4a0b-9ab8-cee6fee04c02"],
   lists: {
     couples: "Couples", answers: "Prompt Answers", reveals: "Couple Journal",
     checkins: "Sunday Check-ins", pilotIntake: "Pilot Intake", participation: "Participation",
