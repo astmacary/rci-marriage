@@ -1228,7 +1228,7 @@
   render();
   if (!C.clientId) return;
   try {
-    auth = new msal.PublicClientApplication({ auth: { clientId: C.clientId, authority: `https://login.microsoftonline.com/${C.tenantId}`, redirectUri: C.redirectUri, navigateToLoginRequestUrl: false }, cache: { cacheLocation: "sessionStorage" } });
+    auth = new msal.PublicClientApplication({ auth: { clientId: C.clientId, authority: `https://login.microsoftonline.com/${C.tenantId}`, redirectUri: C.redirectUri, navigateToLoginRequestUrl: false }, cache: { cacheLocation: "localStorage" } });
     await auth.initialize(); const result = await auth.handleRedirectPromise();
     state.account = result?.account || auth.getAllAccounts().find(account => account.tenantId === C.tenantId) || null;
     if (state.account) { auth.setActiveAccount(state.account); await checkPush(); await loadView(); celebrateOpening(); }
