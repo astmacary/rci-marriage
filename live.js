@@ -1013,7 +1013,7 @@
     const bar = document.getElementById("brandbar"); if (bar && bar !== root) bar.className = "brandbar" + (wide ? " wide" : "");
     const views = { couple: coupleView, profile: profileView, calendar, today, checkin, journal, orchard: pilotJournal, sealed, grow, branch, gather, leaders, mentor: mentorDash };
     root.innerHTML = header() + `<main>
-      ${!account ? card("Sign in", `<p class="sub">Sign in with your provided email address. A “Sign in with Microsoft” screen is to be expected.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}`) :
+      ${!account && state.booting ? "" : !account ? card("Sign in", `<p class="sub">Sign in with your provided email address. A “Sign in with Microsoft” screen is to be expected.</p>${C.clientId ? button("signin", "Sign in with Microsoft") : empty("Live sign-in is being configured.")}${state.message ? `<p role="status">${esc(state.message)}</p>` : ""}`) :
         `${state.message ? `<div class="banner" role="status">${esc(state.message)}</div>` : ""}${state.site && !state.loading && state.view === "today" ? notifications() : ""}${state.loading ? "" : !state.site ? empty("The connection is not ready. Pull down to refresh.") : (views[state.view] || today)()}`}
       </main>${account && !wide ? tabBar() : ""}`;
     if (typeof document.querySelector === "function") { headerPhoto(); hydratePhotos(); document.body?.classList.toggle("signed-out", !account); }
@@ -1054,7 +1054,7 @@
     const calDay = event.target.closest("[data-cal]");
     if (calDay) { state.calDay = Number(calDay.dataset.cal); render(); return; }
     const view = event.target.closest("[data-view]");
-    if (view && !state.loading) { if (view.dataset.view === "gather") state.gcal = null; state.view = view.dataset.view; state.message = ""; await loadView(); return; }
+    if (view && !state.loading) { if (view.dataset.view === "gather") state.gcal = null; state.view = view.dataset.view; state.message = ""; window.scrollTo?.(0, 0); await loadView(); window.scrollTo?.(0, 0); return; }
     const target = event.target.closest("[data-live]"); if (!target) return;
     if (target.dataset.live === "watch-leader-video") { await startLeaderVideo(target); return; }
     if (target.dataset.live === "upload-leader-video" && state.view === "leaders" && !state.videoUploading) {
@@ -1225,12 +1225,13 @@
       state.message = ["branch-message", "branch-reply"].includes(form.dataset.form) ? "" : "Saved to SharePoint."; render();
     } catch (error) { status.textContent = notice(error); submit.disabled = false; }
   });
-  render();
+  state.booting = !!C.clientId; render();
   if (!C.clientId) return;
   try {
     auth = new msal.PublicClientApplication({ auth: { clientId: C.clientId, authority: `https://login.microsoftonline.com/${C.tenantId}`, redirectUri: C.redirectUri, navigateToLoginRequestUrl: false }, cache: { cacheLocation: "localStorage" } });
     await auth.initialize(); const result = await auth.handleRedirectPromise();
     state.account = result?.account || auth.getAllAccounts().find(account => account.tenantId === C.tenantId) || null;
     if (state.account) { auth.setActiveAccount(state.account); await checkPush(); await loadView(); celebrateOpening(); }
-  } catch (error) { state.message = notice(error); render(); }
+  } catch (error) { state.message = notice(error); }
+  state.booting = false; if (!state.account) render();
 })();
