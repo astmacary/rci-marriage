@@ -2,7 +2,7 @@
 // Keeps a copy of the app so it opens offline and can be installed, but always
 // asks the server for the newest version first, so updates show up right away.
 // Couple data and sign-in always go to Microsoft live; they are never cached.
-const CACHE = "rci-marriage-v43";
+const CACHE = "rci-marriage-v44";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "config.js", "live.js", "src/data.js", "vendor/msal-browser.min.js",
   "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png",
   "icons/apple-touch-icon.png", "icons/favicon.png", "icons/rci-marriage-logo.png"];

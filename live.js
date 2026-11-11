@@ -1217,7 +1217,7 @@
         if (JSON.stringify(entries).length > 55000) throw new Error("Journal capacity reached");
         await updateJournal({ entries });
       }
-      state.message = "Saved to SharePoint."; render();
+      state.message = ["branch-message", "branch-reply"].includes(form.dataset.form) ? "" : "Saved to SharePoint."; render();
     } catch (error) { status.textContent = notice(error); submit.disabled = false; }
   });
   render();

@@ -310,7 +310,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "40";
+const APP_VERSION = "41";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -699,6 +699,6 @@ if ("serviceWorker" in navigator && location.protocol === "https:") navigator.se
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
 <script src="src/data.js?v=35" defer></script>
-<script src="live.js?v=37" defer></script>
+<script src="live.js?v=38" defer></script>
 </body>
 </html>
