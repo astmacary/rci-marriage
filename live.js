@@ -197,7 +197,7 @@
       const needed = state.view === "leaders" ? ["couples", "participation", "rsvps", "content", "mentorRequests"]
         : state.view === "mentor" ? ["couples", "participation", "rsvps", "mentorRequests"]
         : state.view === "checkin" ? ["checkins", "couples"]
-        : state.view === "journal" ? ["couples", "answers"]
+        : state.view === "journal" ? ["couples"]
         : state.view === "orchard" ? ["couples", "content", "pilotIntake"]
         : state.view === "branch" ? ["couples", "messages"]
         : state.view === "couple" ? ["couples"]
@@ -333,13 +333,6 @@
     if (prior) await graph(`${base(key)}/items/${prior.id}/fields`, { method: "PATCH", headers: { "If-Match": prior.eTag || "" }, body: JSON.stringify(fields) });
     else await graph(`${base(key)}/items`, { method: "POST", body: JSON.stringify({ fields }) });
     await load(key);
-  }
-  function responseList(key) {
-    if (state.errors[key]) return empty(state.errors[key]);
-    return own(key).slice().sort((a,b) => b.createdDateTime.localeCompare(a.createdDateTime)).map(item => {
-      const data = D.read(key, item);
-      return `<article style="border-top:1px solid var(--line);padding-top:12px"><b>${esc(data.date || item.fields.Title)}</b><p style="white-space:pre-wrap">${esc(data.answer || data.need || "Check-in saved")}</p></article>`;
-    }).join("") || empty("No saved responses yet.");
   }
   const FRUIT = [["January","The Vine","John 15:5"],["February","Love","1 Corinthians 13:4–7"],["March","Joy","Philippians 4:4"],["April","Peace","Colossians 3:15"],
     ["May","Patience","Ephesians 4:2"],["June","Kindness","Ephesians 4:32"],["July","Goodness","Galatians 6:10"],["August","Faithfulness","Proverbs 3:3"],
@@ -575,7 +568,7 @@
     const entries = Array.isArray(savedEntries) ? savedEntries : [];
     return card("Our shared journal", `<p class="sub">Notes added here are only visible to the two of you.</p>
       ${entries.map(entry=>`<article style="border-top:1px solid var(--line)"><p class="sub">${esc(entry.date)}</p><p style="white-space:pre-wrap">${esc(entry.text)}</p></article>`).join("")}
-      <form data-form="journal"><textarea id="journal-note" aria-label="Write a note to each other" placeholder="Write a note to each other…" name="text" maxlength="6000" rows="4" required></textarea><button class="btn" type="submit">Save to our journal</button><p role="status" class="form-status"></p></form>`) + card("All our reveals", sharedList("reveal", 400, "No reveals yet.")) + card("My saved answers", responseList("answers"));
+      <form data-form="journal"><textarea id="journal-note" aria-label="Write a note to each other" placeholder="Write a note to each other…" name="text" maxlength="6000" rows="4" required></textarea><button class="btn" type="submit">Save to our journal</button><p role="status" class="form-status"></p></form>`) + card("All our reveals", sharedList("reveal", 400, "No reveals yet."));
   }
   function pilotJournal() {
     const issue = state.errors.couples || state.errors.reveals;

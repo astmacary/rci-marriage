@@ -302,7 +302,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "39";
+const APP_VERSION = "40";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -356,7 +356,7 @@ const DEFAULT_STATE = {
   rsvp:null, retreat:false, harvest:false, janDay:25, contacted:{2:true}
 };
 const STORE_KEY = "rci-marriage:demo:v" + APP_VERSION;
-let S = (() => { if (!DEMO) return structuredClone(DEFAULT_STATE); try { return Object.assign({}, DEFAULT_STATE, JSON.parse(localStorage.getItem(STORE_KEY) || "{}")); } catch(_) { return Object.assign({}, DEFAULT_STATE); } })();
+let S = (() => { if (!DEMO) return structuredClone(DEFAULT_STATE); try { return Object.assign({}, DEFAULT_STATE, JSON.parse(localStorage.getItem(STORE_KEY) ?? localStorage.getItem("rci-marriage:demo:v39") ?? "{}")); } catch(_) { return Object.assign({}, DEFAULT_STATE); } })();
 function save(){ if (!DEMO) return; try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(_){} }
 function set(patch){ Object.assign(S, patch); save(); render(); }
 
@@ -691,6 +691,6 @@ if ("serviceWorker" in navigator && location.protocol === "https:") navigator.se
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
 <script src="src/data.js?v=35" defer></script>
-<script src="live.js?v=36" defer></script>
+<script src="live.js?v=37" defer></script>
 </body>
 </html>
