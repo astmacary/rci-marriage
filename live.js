@@ -214,7 +214,7 @@
   // The signed-in spouse's side of the couple row, and the other spouse's details.
   const mySide = () => D.side(profile(), state.account?.username) || "spouse1";
   const spouseOf = () => { const c = profile(); if (!c) return null; const two = mySide() === "spouse2";
-    return { name: two ? c.spouse1Name : c.spouse2Name, photo: two ? c.photo1 : c.photo2 }; };
+    return { name: two ? c.spouse1Name : c.spouse2Name, photo: two ? c.photo1 : c.photo2, email: two ? c.email1 : c.email2 }; };
   const spouseFirst = () => String(spouseOf()?.name || "").trim().split(/\s+/)[0] || "";
   function profile() {
     const email = (state.account?.username || "").toLowerCase();
@@ -693,10 +693,18 @@
   const photos = new Map();
   function photoUrl(raw) {
     const path = D.assetPath(raw, C.sitePath);
-    const key = path || (raw === "me" ? "me" : "");
+    const userEmail = /^user:[^\s/]+@[^\s/]+$/.test(String(raw)) ? String(raw).slice(5) : "";
+    const key = path || (raw === "me" ? "me" : userEmail ? raw : "");
     if (!key) return Promise.resolve(null);
     if (!photos.has(key)) photos.set(key, (async () => {
       try {
+        if (userEmail) {
+          // Another person's Microsoft profile photo, used when they haven't uploaded one in the app.
+          const { accessToken } = await auth.acquireTokenSilent({ scopes: ["User.ReadBasic.All"], account: state.account });
+          const r = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(userEmail)}/photo/$value`, { headers: { Authorization: `Bearer ${accessToken}` } });
+          if (!r.ok) return null;
+          return URL.createObjectURL(await r.blob());
+        }
         const res = key === "me" ? await graph("me/photo/$value", { raw: true })
           : await graph(`sites/${state.site.id}/lists/${encodeURIComponent("Site Assets")}/drive/root:/${path.split("/").map(encodeURIComponent).join("/")}:/content`, { raw: true });
         return URL.createObjectURL(await res.blob());
@@ -728,7 +736,7 @@
   const pairNameOf = c => [c?.spouse1Name, c?.spouse2Name].map(n => String(n || "").trim().split(/\s+/)[0]).filter(Boolean).join(" & ") || c?.title || "Couple";
   const STAR = "";
   // A person's photo: their SharePoint photo, else their Microsoft photo when it's the signed-in person.
-  const personChain = (raw, email) => [raw, String(email || "").toLowerCase() === String(state.account?.username || "").toLowerCase() ? "me" : ""].filter(Boolean).join("|");
+  const personChain = (raw, email) => { const e = String(email || "").toLowerCase(); return [raw, !e ? "" : e === String(state.account?.username || "").toLowerCase() ? "me" : "user:" + e].filter(Boolean).join("|"); };
   // Gives (or removes) a mentor couple's read access to the lists behind their dashboard numbers.
   // Uses the SharePoint permission already approved for this app registration (AllSites.FullControl), as RCI Productions does.
   async function spToken() {
@@ -778,8 +786,8 @@
     return back + `<section class="card profile-card">
         <div class="cover-wrap">${c.couplePhoto ? `<img alt="Couples photo" data-photo="${esc(c.couplePhoto)}" hidden class="cover"><div class="cover cover-empty">Loading photo…</div>` : `<div class="cover cover-empty">No couples photo yet</div>`}</div>
         <div class="pair">
-          <div class="person">${face(personChain(c.photo1, c.memberEmails?.[0]), c.spouse1Name, 92)}<b>${esc(c.spouse1Name || "—")}</b></div>
-          <div class="person">${face(personChain(c.photo2, c.memberEmails?.[1]), c.spouse2Name, 92)}<b>${esc(c.spouse2Name || "—")}</b></div>
+          <div class="person">${face(personChain(c.photo1, c.email1 || c.memberEmails?.[0]), c.spouse1Name, 92)}<b>${esc(c.spouse1Name || "—")}</b></div>
+          <div class="person">${face(personChain(c.photo2, c.email2 || c.memberEmails?.[1]), c.spouse2Name, 92)}<b>${esc(c.spouse2Name || "—")}</b></div>
         </div>
         ${(() => { const full = allCouples().find(x => x.itemId === c.itemId); const viewerMentor = full && mentorOf(full)?.itemId === myCouple()?.itemId;
           const icons = (isLeader() || viewerMentor) && (c.contact || c.gathering) ? `<div class="pref-icons">${c.contact ? `<span title="Preferred contact method">${c.contact === "Call" ? "📞" : c.contact === "Email" ? "✉️" : "💬"} ${esc(c.contact)}</span>` : ""}${c.gathering ? `<span title="Preferred gathering method">${c.gathering === "Virtual" ? "💻" : "🤝"} ${esc(c.gathering)}</span>` : ""}</div>` : "";
@@ -801,7 +809,7 @@
         <div class="pair">
           <div class="person"><span class="face-wrap">${face(myPhotoChain(), myName(), 92)}<label class="edit-btn face-edit" for="pf-photo" aria-label="Change your photo">${PENCIL}</label></span><b>${esc(myName())}</b><span class="sub">You</span>
             <input id="pf-photo" type="file" accept="image/*" data-field="${mine}" hidden></div>
-          <div class="person">${face(sp?.photo || "", sp?.name, 92)}<b>${esc(sp?.name || "Not added yet")}</b><span class="sub">Your spouse</span></div>
+          <div class="person">${face(personChain(sp?.photo || "", sp?.email), sp?.name, 92)}<b>${esc(sp?.name || "Not added yet")}</b><span class="sub">Your spouse</span></div>
         </div>
         ${c.anniversary ? `<p class="sub" style="text-align:center;margin:0">💍 Married ${esc(longDate(c.anniversary))}</p>` : ""}
       </section>

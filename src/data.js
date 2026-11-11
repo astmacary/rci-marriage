@@ -74,7 +74,7 @@
         spouse1Name: f.Spouse1Name || old.members?.[0]?.name || "", spouse2Name: f.Spouse2Name || old.members?.[1]?.name || "",
         anniversary: f.AnniversaryDate ? fromDate(f.AnniversaryDate) : (old.anniversary || ""),
         itemId: str(item?.id), photo1: photoRaw(f.Spouse1Photo), photo2: photoRaw(f.Spouse2Photo), couplePhoto: photoRaw(f.CouplePhoto),
-        phone1: f.Spouse1Phone || "", phone2: f.Spouse2Phone || "",
+        email1: f.Spouse1Email || "", email2: f.Spouse2Email || "", phone1: f.Spouse1Phone || "", phone2: f.Spouse2Phone || "",
         birthday1: f.Spouse1Birthday ? fromDate(f.Spouse1Birthday) : "", birthday2: f.Spouse2Birthday ? fromDate(f.Spouse2Birthday) : "",
         contact: f.PreferredContact || "", gathering: f.PreferredGathering || "" };
     }
