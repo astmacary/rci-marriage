@@ -25,11 +25,11 @@
     ".sm-btn{position:relative}" +
     ".sm-dot{position:absolute;top:-1px;right:-1px;width:10px;height:10px;border-radius:50%;background:#C62828;border:2px solid #0A2440}" +
     ".sm-back{position:fixed;inset:0;z-index:90;background:rgba(3,17,31,.55)}" +
-    ".sm-sheet{position:fixed;left:0;right:0;bottom:0;z-index:91;max-width:560px;margin:0 auto;background:var(--card,#fff);color:var(--ink,#1a1a1a);border-radius:20px 20px 0 0;padding:10px 16px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;box-shadow:0 -8px 30px rgba(3,17,31,.3);max-height:85vh;overflow:auto}" +
+    ".sm-sheet{position:fixed;left:0;right:0;bottom:0;z-index:91;max-width:560px;margin:0 auto;background:var(--surface,#fff);color:var(--ink,#0A2440);border-radius:20px 20px 0 0;padding:10px 16px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;box-shadow:0 -8px 30px rgba(3,17,31,.3);max-height:85vh;overflow:auto}" +
     ".sm-grab{width:40px;height:5px;border-radius:3px;background:var(--soft,#ddd);align-self:center;margin-bottom:6px}" +
     ".sm-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}.sm-head h2{margin:0;font-size:22px;letter-spacing:.04em;text-transform:uppercase}" +
-    ".sm-x{width:40px;height:40px;border-radius:50%;border:0;background:var(--soft,#eee);color:inherit;display:grid;place-items:center;cursor:pointer}" +
-    ".sm-row{display:flex;align-items:center;gap:12px;min-height:58px;padding:0 12px;border-radius:12px;border:1px solid var(--soft,#ddd);text-decoration:none;color:inherit}" +
+    ".sm-x{width:40px;height:40px;border-radius:50%;border:0;background:#0A2440;color:#F3EEE6;display:grid;place-items:center;cursor:pointer}" +
+    ".sm-row{display:flex;align-items:center;gap:12px;min-height:58px;padding:0 12px;border-radius:12px;border:1px solid var(--line2,#ccc);text-decoration:none;color:inherit}" +
     ".sm-row.sm-home{border:2px solid #C4955F}.sm-row.sm-here{border:2px solid #0A2440}:root[data-theme=dark] .sm-row.sm-here{border-color:#D4A66E}" +
     ".sm-ic{width:36px;height:36px;border-radius:10px;color:#fff;display:grid;place-items:center;flex:none}" +
     ".sm-info{flex:1;min-width:0}.sm-info b{display:block}.sm-info small{display:block;font-size:12px;opacity:.7}" +
