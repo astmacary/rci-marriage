@@ -505,7 +505,9 @@
     // Weeks open on the month's Sundays: Week 1 on the 1st Sunday, Week 2 on the 2nd, and so on.
     const sundays = (() => { const { y, m } = parts(), out = []; for (let d = 1; d <= 31; d++) { const dt = new Date(Date.UTC(y, m - 1, d)); if (dt.getUTCMonth() !== m - 1) break; if (dt.getUTCDay() === 0) out.push(dt.toISOString().slice(0, 10)); } return out; })();
     const opens = i => sundays[i] || sundays[sundays.length - 1];
-    const gate = (i, html) => !html ? "" : day() >= opens(i) ? html
+    // Temporarily show Week 4 while its content is being edited.
+    const week4EditingPreview = Date.now() < Date.parse("2026-11-12T01:26:16Z");
+    const gate = (i, html) => !html ? "" : (i === 3 && week4EditingPreview) || day() >= opens(i) ? html
       : panel(`Week ${i + 1} · ${STEPS[i]}`, `<p class="sub" style="margin:0">Opens Sunday, ${esc(longDate(opens(i)).replace(/, \d{4}$/, ""))}.</p>`);
     return focus + gate(0, videoCard + (week0 || (leaderVideo || week1Extra ? "" : panel("Week 1 · Plant", `${tag(0)}<div style="font-size:16px;font-weight:700">This month’s resources are on the way</div>${empty("The leader video, devotional and couple challenge appear here when the ministry publishes them.")}`, now(0)))))
       + gate(1, week1Items + (mf.InteractiveActivity || selected ? panel("Week 2 · Water", `${tag(1)}<div style="font-size:16px;font-weight:700">Interactive for couples</div>${mf.InteractiveActivity ? `<div style="line-height:1.5">${paras(mf.InteractiveActivity)}</div>` : empty(selected.water)}
