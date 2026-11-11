@@ -124,6 +124,9 @@ input[type=date]{appearance:none;-webkit-appearance:none;min-height:48px;text-al
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 input[type=date]::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
 [hidden]{display:none!important}
+.av-btn{position:relative}
+.mentor-star{position:absolute;top:-2px;right:calc(50% - 40px);z-index:2;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--brand-gold);color:var(--navy);font-size:13px;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.msg-row{border-top:1px solid var(--line);padding-top:10px}
 .sp{font-size:14px;line-height:1.45;color:var(--ink)}
 body.signed-out .theme-line{visibility:hidden}
 @media (max-width:640px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.tile{padding:14px!important}.tile b{font-size:26px!important}}
@@ -299,7 +302,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "38";
+const APP_VERSION = "39";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
@@ -688,6 +691,6 @@ if ("serviceWorker" in navigator && location.protocol === "https:") navigator.se
 </script>
 <script src="vendor/msal-browser.min.js" defer></script>
 <script src="src/data.js?v=35" defer></script>
-<script src="live.js?v=35" defer></script>
+<script src="live.js?v=36" defer></script>
 </body>
 </html>

@@ -14,3 +14,20 @@ Participation weeks run Monday through Sunday in Eastern time. A month fills in 
 Notes open for submission January 29 Eastern. The browser encrypts each note with a one-time AES key wrapped with the published RSA public key. The job checks its own clock against the month-end schedule before decrypting eligible notes into the permissioned couple journal. The first eligible submission per spouse per month is used. February through December open on the first day of each month. Regular reveal workflows must explicitly filter for ordinary prompt answers. Site owners retain administrative access to journal entries after release. Anyone who can access the release private key can decrypt sealed intake, so restrict it to the private job. Journal changes use conditional writes to preserve concurrent edits. Failed runs should alert the ministry operator and be retried.
 
 No client secrets, release keys, keyed flow URLs, or real couple records belong in Git.
+
+## Branch Messages list (for the Branch page messages)
+
+Create a SharePoint list named **Branch Messages** on the RCI Marriage site with these columns:
+
+| Column | Type |
+|---|---|
+| Title | (default) |
+| Branch | Single line of text |
+| Message | Multiple lines of text (plain) |
+| AuthorName | Single line of text |
+
+Give couples permission to add items and read items (the app shows each couple only their own Branch's messages, and only lets authors delete their own). Until the list exists, the Branch page simply hides the messages card.
+
+## Mentor couples
+
+Leaders mark a mentor couple from the Leader dashboard (tap a couple, then "Mark as mentor couple"). This sets `isMentor` in the couple's AppData. Assigning a couple to a mentor sets their **MentorCouple** column to the mentor couple's emails and copies the mentor's **Branch**. Mentor couples see a ★ button on their Profile that opens the Mentor dashboard. Mentors need read access to Participation, RSVPs and Mentor Requests for their dashboard numbers to load.
