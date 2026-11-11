@@ -505,6 +505,9 @@
     // Weeks open on the month's Sundays: Week 1 on the 1st Sunday, Week 2 on the 2nd, and so on.
     const sundays = (() => { const { y, m } = parts(), out = []; for (let d = 1; d <= 31; d++) { const dt = new Date(Date.UTC(y, m - 1, d)); if (dt.getUTCMonth() !== m - 1) break; if (dt.getUTCDay() === 0) out.push(dt.toISOString().slice(0, 10)); } return out; })();
     const opens = i => sundays[i] || sundays[sundays.length - 1];
+    // Week 4 text comes from the Monthly Content "Harvest Discussion" column (matched by name, since SharePoint may encode it).
+    const harvestKey = Object.keys(mf || {}).find(k => /harvest/i.test(k) && /discussion/i.test(k)) || Object.keys(mf || {}).find(k => /harvest/i.test(k) && typeof mf[k] === "string");
+    const harvestDisc = harvestKey ? mf[harvestKey] : "";
     // Temporarily show Week 4 while its content is being edited.
     const week4EditingPreview = Date.now() < Date.parse("2026-11-12T01:26:16Z");
     const gate = (i, html) => !html ? "" : (i === 3 && week4EditingPreview) || day() >= opens(i) ? html
@@ -515,7 +518,7 @@
       + gate(2, panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}</div>
           ${mf.MonthlyPrayer ? `<div><span class="label" style="color:var(--fig)">Monthly prayer</span><div style="line-height:1.5;margin-top:6px">${paras(mf.MonthlyPrayer)}</div></div>` : ""}
           ${mf.MonthlyDeclaration ? `<div><span class="label" style="color:var(--fig)">Monthly declaration</span><div style="line-height:1.5;margin-top:6px;font-weight:600">${paras(mf.MonthlyDeclaration)}</div></div>` : ""}`, now(2)))
-      + gate(3, panel("Week 4 · Harvest", `${tag(3)}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="gather" class="linkbtn">Open the Gatherings calendar ›</button>`, now(3)));
+      + gate(3, panel("Week 4 · Harvest", `${tag(3)}${harvestDisc ? `<div style="font-size:16px;font-weight:700">Harvest discussion</div><div style="line-height:1.5">${paras(harvestDisc)}</div><hr style="border:0;border-top:1px solid var(--soft);margin:4px 0">` : ""}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="gather" class="linkbtn">Open the Gatherings calendar ›</button>`, now(3)));
   }
   function branch() {
     const couple = profile();
