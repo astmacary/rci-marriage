@@ -40,6 +40,7 @@ button{font:inherit;color:inherit}
 h1,h2,h3{font-family:var(--display);text-wrap:balance}
 .app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
 .app.wide{max-width:1280px}
+@media (min-width:768px){.app:not(.wide),.brandbar:not(.wide),nav.tabs div{max-width:1040px}.app:not(.wide) main,.app:not(.wide)>section{padding-left:24px;padding-right:24px}}
 .demo{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 20px 0;padding:6px 6px 6px 12px;border-radius:12px;background:var(--gold-soft);color:var(--gold);font-size:12px;font-weight:600}
 .demo button{border:1px solid var(--brand-gold);background:transparent;border-radius:999px;padding:4px 10px;min-height:32px;cursor:pointer;font-weight:700;font-size:12px;color:var(--gold)}
 .head{background:transparent;color:var(--ink);padding:18px 20px 2px;display:flex;flex-direction:column;gap:6px}
@@ -311,7 +312,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "45";
+const APP_VERSION = "46";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
