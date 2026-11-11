@@ -518,7 +518,7 @@
       + gate(2, panel("Week 3 · Grow", `${tag(2)}<div style="font-size:16px;font-weight:700">Share and pray with ${spouseFirst() ? esc(spouseFirst()) : "your spouse"}</div>
           ${mf.MonthlyPrayer ? `<div><span class="label" style="color:var(--fig)">Monthly prayer</span><div style="line-height:1.5;margin-top:6px">${paras(mf.MonthlyPrayer)}</div></div>` : ""}
           ${mf.MonthlyDeclaration ? `<div><span class="label" style="color:var(--fig)">Monthly declaration</span><div style="line-height:1.5;margin-top:6px;font-weight:600">${paras(mf.MonthlyDeclaration)}</div></div>` : ""}`, now(2)))
-      + gate(3, panel("Week 4 · Harvest", `${tag(3)}${harvestDisc ? `<div style="font-size:16px;font-weight:700">Harvest discussion</div><div style="line-height:1.5">${paras(harvestDisc)}</div><hr style="border:0;border-top:1px solid var(--soft);margin:4px 0">` : ""}<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="gather" class="linkbtn">Open the Gatherings calendar ›</button>`, now(3)));
+      + gate(3, panel("Week 4 · Harvest", `${tag(3)}${harvestDisc ? `<div style="font-size:16px;font-weight:700">Harvest discussion</div><div style="line-height:1.5">${paras(harvestDisc)}</div>` : `<div style="font-size:16px;font-weight:700">Monthly gathering</div><p class="sub">Finish the month and this fruit is added to your Orchard.</p><button type="button" data-view="gather" class="linkbtn">Open the Gatherings calendar ›</button>`}`, now(3)));
   }
   function branch() {
     const couple = profile();
