@@ -299,7 +299,7 @@ th:first-child,td:first-child{padding-left:0}
   paint();
 })();
 </script>
-<script src="serve-menu.js?v=5"></script>
+<script src="serve-menu.js?v=6"></script>
 
 <script src="config.js"></script>
 <script>
@@ -312,7 +312,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "52";
+const APP_VERSION = "60";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
