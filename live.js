@@ -636,8 +636,14 @@
       <button class="btn" type="submit">Seal my note</button><p class="form-status" role="status"></p></form>`);
   }
   // Gatherings calendar, laid out like the Security app's calendar: tap a day to see details and RSVP.
+  // Gatherings everyone sees, plus Branch-only dates for that Branch's couples (leaders see all of them).
+  const myBranchName = () => String(myCouple()?.branch || "").trim();
+  const canSeeGathering = g => !g.branch || isLeader() || g.branch.toLowerCase() === myBranchName().toLowerCase();
+  const canAddEveryone = () => isLeader();
+  const canAddBranch = () => isMentor(myCouple()) && !!myBranchName();
+  const canRemoveGathering = g => !!g.added && (isLeader() || (canAddBranch() && String(g.branch || "").toLowerCase() === myBranchName().toLowerCase()));
   function gatherings() {
-    return (state.rows.content || []).map(item => D.read("content", item)).filter(row => row.kind === "gathering" && /^\d{4}-\d{2}-\d{2}$/.test(String(row.date || "")))
+    return (state.rows.content || []).map(item => ({ ...D.read("content", item), itemId: String(item.id || "") })).filter(row => row.kind === "gathering" && /^\d{4}-\d{2}-\d{2}$/.test(String(row.date || "")) && canSeeGathering(row))
       .map(row => ({ ...row, end: /^\d{4}-\d{2}-\d{2}$/.test(String(row.end || "")) && row.end > row.date ? row.end : row.date })).sort((a, b) => a.date.localeCompare(b.date));
   }
   const ymdAdd = (ymd, n) => { const [y, m, d] = ymd.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
@@ -650,7 +656,24 @@
       <fieldset style="border:0;margin:0;padding:0"><legend class="sub" style="padding:0;margin-bottom:6px">Your RSVP${selection ? ` · saved: ${selection === "yes" ? "We’re going" : "Can’t make it"}` : ""}</legend><div class="grid2">${[["yes","We’re going"],["no","Can’t make it"]].map(([value,text]) =>
         `<label class="tog-check"><input type="radio" name="response" value="${value}" required ${selection === value ? "checked" : ""}><span>${text}</span></label>`).join("")}</div></fieldset><button class="btn" type="submit" style="margin-top:10px">Save RSVP</button><p class="form-status sub" role="status"></p></form>`;
   }
+  function addGatheringForm(sel) {
+    const branches = [...new Set(allCouples().map(c => String(c.branch || "").trim()).filter(Boolean))].sort();
+    const scope = canAddEveryone()
+      ? `<label for="ga-scope">Who can see it</label><select id="ga-scope" name="scope"><option value="">Everyone</option>${branches.map(b => `<option value="${esc(b)}">${esc(b)} Branch only</option>`).join("")}</select>`
+      : `<input type="hidden" name="scope" value="${esc(myBranchName())}"><p class="sub" style="margin:0">Only the ${esc(myBranchName())} Branch will see this date.</p>`;
+    return `<details class="card" style="gap:10px"${state.gaOpen ? " open" : ""}><summary style="cursor:pointer;font-weight:700">+ Add a date</summary>
+      <form data-form="gathering-add" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <label for="ga-title">Name</label><input id="ga-title" name="title" required maxlength="120" placeholder="e.g. Branch dinner">
+        <div class="grid2"><div><label for="ga-date">Date</label><input id="ga-date" name="date" type="date" required value="${esc(sel)}"></div>
+        <div><label for="ga-end">Last day (optional)</label><input id="ga-end" name="end" type="date"></div></div>
+        <label for="ga-when">Time &amp; place (optional)</label><input id="ga-when" name="when" maxlength="120" placeholder="e.g. 6:30 PM · Fellowship Hall">
+        <label for="ga-details">Details (optional)</label><textarea id="ga-details" name="details" rows="3" maxlength="1000"></textarea>
+        ${scope}
+        <button class="btn" type="submit">Add to calendar</button><p class="form-status sub" role="status"></p></form></details>`;
+  }
   function gather() {
+    // When a leader opens Gatherings, make sure every mentor couple can add their Branch's dates (once per visit, quietly).
+    if (isLeader() && !state.mentorSync) { state.mentorSync = true; (async () => { for (const c of allCouples().filter(isMentor)) await mentorAccess(c, true).catch(e => console.warn("Mentor access", e)); })(); }
     if (state.errors.content || state.errors.pilotIntake) return card("Gather", empty(state.errors.content || state.errors.pilotIntake));
     const list = gatherings(), t = day();
     const people = (state.rows.couples || []).map(item => D.read("couples", item)).filter(c => c.kind === "couple" && c.active !== false);
@@ -675,17 +698,19 @@
     const today = on(sel);
     const yrSel = yearly(sel);
     const celebrate = yrSel.length ? `<section class="card" style="gap:8px">${yrSel.map(x => `<div style="display:flex;align-items:center;gap:10px"><span aria-hidden="true" style="font-size:20px">${x.kind === "birthday" ? "🎂" : "💍"}</span><span style="font-weight:600">${esc(x.text)}${x.kind === "anniversary" && x.years > 0 ? ` <span class="sub" style="font-weight:400">· ${x.years} year${x.years === 1 ? "" : "s"}</span>` : ""}</span></div>`).join("")}</section>` : "";
-    const detail = celebrate + (today.length ? today.map(g => `<section class="card"><span class="label" style="color:var(--fig)">${esc(g.when || longDate(g.date))}</span>
+    const detail = celebrate + (today.length ? today.map(g => `<section class="card"><span class="label" style="color:var(--fig)">${esc(g.when || longDate(g.date))}${g.branch ? ` · ${esc(g.branch)} Branch only` : ""}</span>
         <div style="font-size:17px;font-weight:700">${esc(g.text)}</div>
         ${g.details ? `<p class="sub" style="white-space:pre-wrap">${esc(g.details)}</p>` : `<p class="sub">Time and place to be announced.</p>`}
-        ${D.events.includes(g.event) ? rsvpForm(g.event) : `<p class="sub" style="font-size:13px">RSVPs open closer to the date.</p>`}</section>`).join("")
+        ${D.events.includes(g.event) ? rsvpForm(g.event) : g.added ? "" : `<p class="sub" style="font-size:13px">RSVPs open closer to the date.</p>`}
+        ${canRemoveGathering(g) ? `<button type="button" class="btn ghost" data-live="gathering-del" data-id="${esc(g.itemId)}" style="align-self:flex-start;color:var(--danger,#B3261E)">Remove this date</button>` : ""}</section>`).join("")
       : celebrate ? "" : `<section class="card"><p class="sub" style="text-align:center;margin:0">Nothing on this date.</p></section>`);
-    const upcoming = list.map(g => `<button type="button" class="card" data-gday="${g.date}" style="flex-direction:row;justify-content:space-between;align-items:center;cursor:pointer;font:inherit;color:var(--ink);text-align:left;padding:12px 16px"><span style="font-weight:700">${esc(g.text)}</span><span class="sub">${esc(g.when || longDate(g.date))}</span></button>`).join("");
+    const upcoming = list.map(g => `<button type="button" class="card" data-gday="${g.date}" style="flex-direction:row;justify-content:space-between;align-items:center;cursor:pointer;font:inherit;color:var(--ink);text-align:left;padding:12px 16px"><span style="font-weight:700">${esc(g.text)}${g.branch ? ` <span class="sub" style="font-weight:400">· ${esc(g.branch)}</span>` : ""}</span><span class="sub">${esc(longDate(g.date))}</span></button>`).join("");
+    const addForm = (canAddEveryone() || canAddBranch()) ? addGatheringForm(sel) : "";
     return `<section class="card cal-panel"><div class="cal-head"><h2>${esc(title)}</h2>
         <button type="button" class="btn ghost" data-gcal="today" style="padding:6px 10px;min-height:0">Today</button>
         <button type="button" class="iconbtn" data-gcal="prev" aria-label="Previous month">‹</button><button type="button" class="iconbtn" data-gcal="next" aria-label="Next month">›</button></div>
         <div class="grid7">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(x => `<div class="dowh">${x}</div>`).join("")}${cells}</div></section>
-      <h2 class="label" style="margin:4px 0 0;color:var(--muted)">${esc(longDate(sel))}</h2>${detail}
+      <h2 class="label" style="margin:4px 0 0;color:var(--muted)">${esc(longDate(sel))}</h2>${detail}${addForm}
       <h2 class="label" style="margin:4px 0 0;color:var(--muted)">2027 Gatherings</h2>
       <p class="sub" style="font-size:13px;font-style:italic;margin:0">These are projected dates, pending the church calendar.</p>${upcoming}`;
   }
@@ -751,7 +776,7 @@
     return res.status === 204 ? null : res.json().catch(() => null);
   }
   async function mentorAccess(c, on) {
-    const READ = 1073741826;
+    const READ = 1073741826, CONTRIBUTE = 1073741827;
     for (const email of emailsOf(c)) {
       const user = await sp("web/ensureuser", { method: "POST", body: JSON.stringify({ logonName: `i:0#.f|membership|${email}` }) });
       for (const key of ["participation", "rsvps", "mentorRequests"]) {
@@ -760,6 +785,12 @@
         if (!info?.HasUniqueRoleAssignments) continue; // already inherits site access
         if (on) await sp(`${list}/roleassignments/addroleassignment(principalid=${user.Id},roledefid=${READ})`, { method: "POST" });
         else await sp(`${list}/roleassignments/removeroleassignment(principalid=${user.Id},roledefid=${READ})`, { method: "POST" }).catch(() => null);
+      }
+      // Branch leaders can add (and remove) their Branch's dates on the Gatherings calendar.
+      const content = `web/lists/getbytitle('${C.lists.content.replace(/'/g, "''")}')`;
+      if ((await sp(`${content}?$select=HasUniqueRoleAssignments`))?.HasUniqueRoleAssignments) {
+        if (on) await sp(`${content}/roleassignments/addroleassignment(principalid=${user.Id},roledefid=${CONTRIBUTE})`, { method: "POST" });
+        else await sp(`${content}/roleassignments/removeroleassignment(principalid=${user.Id},roledefid=${CONTRIBUTE})`, { method: "POST" }).catch(() => null);
       }
     }
   }
@@ -1085,6 +1116,14 @@
       if (target.dataset.live === "couple-onboard-close") { state.addCouple = false; render(); }
       if (target.dataset.live === "couple-onboard-refresh" && state.view === "leaders") { await load("onboarding"); await load("couples"); render(); }
       if (target.dataset.live === "profile-edit") { state.profileEdit = !state.profileEdit; render(); }
+      if (target.dataset.live === "gathering-del") {
+        const g = gatherings().find(x => x.itemId === target.dataset.id);
+        if (!g || !canRemoveGathering(g) || !confirm(`Remove “${g.text}” from the calendar?`)) return;
+        target.disabled = true;
+        try { await graph(`${base("content")}/items/${encodeURIComponent(g.itemId)}`, { method: "DELETE" }); await load("content"); }
+        catch (error) { state.message = notice(error); }
+        render(); return;
+      }
       if (target.dataset.live === "toggle-mentor" && state.leaderMode && isLeader()) {
         const c = allCouples().find(x => x.itemId === target.dataset.id); if (!c) return;
         target.disabled = true;
@@ -1216,6 +1255,17 @@
         await updateJournal({ unionGoals: { ...D.parse(state.journal).unionGoals, [goal.key]: text } });
       }
       if (form.dataset.form === "sealed") await sealNote(String(values.get("text") || "").trim());
+      if (form.dataset.form === "gathering-add") {
+        if (!canAddEveryone() && !canAddBranch()) throw new Error("Only ministry leaders and Branch leaders can add dates.");
+        const ymd = /^\d{4}-\d{2}-\d{2}$/;
+        const title = String(values.get("title") || "").trim().slice(0, 120), date = String(values.get("date") || ""), endIn = String(values.get("end") || "");
+        if (!title || !ymd.test(date)) throw new Error("Add a name and a date.");
+        const scope = canAddEveryone() ? String(values.get("scope") || "").trim() : myBranchName();
+        const app = { version: 1, added: true, by: myName(), end: ymd.test(endIn) && endIn > date ? endIn : "", when: String(values.get("when") || "").trim().slice(0, 120),
+          details: String(values.get("details") || "").trim().slice(0, 1000), branch: scope };
+        await graph(`${base("content")}/items`, { method: "POST", body: JSON.stringify({ fields: { Title: title, Kind: "Gathering", PromptDate: `${date}T12:00:00Z`, AppData: JSON.stringify(app) } }) });
+        await load("content"); state.gcal = { month: date.slice(0, 7), sel: date }; state.gaOpen = false;
+      }
       if (form.dataset.form === "rsvp") {
         const event = values.get("event"), response = values.get("response");
         const published = (state.rows.content || []).map(D.parse).some(row => row.kind === "event" && row.season === "2027" && row.event === event);
@@ -1230,7 +1280,7 @@
         if (JSON.stringify(entries).length > 55000) throw new Error("Journal capacity reached");
         await updateJournal({ entries });
       }
-      state.message = ["branch-message", "branch-reply"].includes(form.dataset.form) ? "" : "Saved to SharePoint."; render();
+      state.message = ["branch-message", "branch-reply", "gathering-add"].includes(form.dataset.form) ? "" : "Saved to SharePoint."; render();
     } catch (error) { status.textContent = notice(error); submit.disabled = false; }
   });
   state.booting = !!C.clientId; render();
