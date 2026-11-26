@@ -671,7 +671,7 @@
     const scope = canAddEveryone()
       ? `<label for="ga-scope">Who can see it</label><select id="ga-scope" name="scope"><option value="">Everyone</option>${branches.map(b => `<option value="${esc(b)}" ${gathering?.branch?.toLowerCase() === b.toLowerCase() ? "selected" : ""}>${esc(b)} Branch only</option>`).join("")}</select>`
       : `<input type="hidden" name="scope" value="${esc(myBranchName())}"><p class="sub" style="margin:0">Only the ${esc(myBranchName())} Branch will see this date.</p>`;
-    const opener = editing ? `Edit ${esc(gathering.text)}` : `<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v6M9 16h6"/></svg>`;
+    const opener = editing ? `<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>` : `<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v6M9 16h6"/></svg>`;
     return `<details class="card cal-add" style="gap:10px"${state.gaOpen ? " open" : ""}><summary class="iconbtn" aria-label="${editing ? "Edit gathering date" : "Add a date"}" title="${editing ? "Edit gathering date" : "Add a date"}" style="list-style:none;width:max-content;min-width:40px;padding:0 12px;font-size:14px">${opener}</summary>
       <form data-form="${editing ? "gathering-edit" : "gathering-add"}" data-id="${editing ? esc(gathering.itemId) : ""}" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
         <label for="ga-title">Name</label><input id="ga-title" name="title" required maxlength="120" placeholder="e.g. Branch dinner" value="${esc(gathering?.text || "")}">
@@ -725,7 +725,7 @@
         <button type="button" class="btn ghost" data-gcal="today" style="padding:6px 10px;min-height:0">Today</button>
         <button type="button" class="iconbtn" data-gcal="prev" aria-label="Previous month">‹</button><button type="button" class="iconbtn" data-gcal="next" aria-label="Next month">›</button></div>
         <div class="grid7">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(x => `<div class="dowh">${x}</div>`).join("")}${cells}</div></section>
-      <h2 class="label" style="margin:4px 0 0;color:var(--muted)">${esc(longDate(sel))}</h2>${detail}${addForm}
+      <div class="row" style="justify-content:flex-start;align-items:center;gap:10px;margin:4px 0 0"><h2 class="label" style="margin:0;color:var(--muted)">${esc(longDate(sel))}</h2>${addForm}</div>${detail}
       <h2 class="label" style="margin:4px 0 0;color:var(--muted)">2027 Gatherings</h2>
       <p class="sub" style="font-size:13px;font-style:italic;margin:0">These are projected dates, pending the church calendar.</p>${upcoming}`;
   }
