@@ -103,7 +103,7 @@
     return response.status === 204 ? null : response.json();
   }
   async function uploadGatheringFlyer(file) {
-    if (!file || file.size > 4 * 1024 * 1024 || !(/^(image\\/|application\\/pdf$)/i.test(file.type))) throw new Error("Choose an image or PDF flyer under 4 MB.");
+    if (!file || file.size > 4 * 1024 * 1024 || !(/^(image\/|application\/pdf$)/i.test(file.type))) throw new Error("Choose an image or PDF flyer under 4 MB.");
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "flyer";
     const fileName = `gathering_${crypto.randomUUID()}_${safeName}`;
     const result = await graph(`sites/${state.site.id}/lists/${encodeURIComponent("Site Assets")}/drive/root:/${encodeURIComponent(fileName)}:/content`,
@@ -960,7 +960,7 @@
     const clean = key => String(values.get(key) || "").trim();
     const coupleName = clean("coupleName");
     const spouses = ["husband", "wife"].map(key => ({ name: clean(key + "Name"), email: clean(key + "Email").toLowerCase() }));
-    if (!coupleName || coupleName.length > 120 || /[\\/:*?"<>|#%\u0000-\u001f]/.test(coupleName) || /[. ]$/.test(coupleName))
+    if (!coupleName || coupleName.length > 120 || /[\/:*?"<>|#%\u0000-\u001f]/.test(coupleName) || /[. ]$/.test(coupleName))
       throw new Error("Enter a couple name without folder punctuation or a trailing period.");
     if (spouses.some(spouse => !spouse.name || spouse.name.length > 120 || spouse.email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(spouse.email)) || spouses[0].email === spouses[1].email)
       throw new Error("Enter a full name and a different Microsoft sign-in email for each spouse.");
@@ -1284,7 +1284,7 @@
       if (["gathering-add", "gathering-edit"].includes(form.dataset.form)) {
         const editing = form.dataset.form === "gathering-edit";
         if (!canAddEveryone() && !canAddBranch()) throw new Error("Only ministry leaders and Branch leaders can manage dates.");
-        const ymd = /^\\d{4}-\\d{2}-\\d{2}$/;
+        const ymd = /^\d{4}-\d{2}-\d{2}$/;
         const title = String(values.get("title") || "").trim().slice(0, 120), date = String(values.get("date") || ""), endIn = String(values.get("end") || "");
         if (!title || !ymd.test(date)) throw new Error("Add a name and a date.");
         const existingItem = editing ? (state.rows.content || []).find(item => String(item.id) === form.dataset.id) : null;
