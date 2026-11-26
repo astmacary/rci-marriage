@@ -2,7 +2,7 @@
 // Keeps a copy of the app so it opens offline and can be installed, but always
 // asks the server for the newest version first, so updates show up right away.
 // Couple data and sign-in always go to Microsoft live; they are never cached.
-const CACHE = "rci-marriage-v65";
+const CACHE = "rci-marriage-v66";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "config.js", "live.js", "serve-menu.js", "src/data.js", "vendor/msal-browser.min.js",
   "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png",
   "icons/apple-touch-icon.png", "icons/favicon.png", "icons/rci-marriage-logo.png"];
@@ -42,7 +42,7 @@ self.addEventListener("push", event => {
     body: ["Your Sunday check-in is available.", "A sealed note is ready to read."].includes(data.body)
       ? data.body : "You have a ministry update. Open RCI Marriage to view it.",
     tag: typeof data.tag === "string" ? data.tag : "rci-marriage",
-    icon: new URL("icons/icon-192.png", self.registration.scope).href
+    icon: new URL("icons/marriage-tab-icon.png", self.registration.scope).href
   }));
 });
 
