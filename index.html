@@ -6,7 +6,7 @@
 <title>RCI Marriage</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/marriage-tab-icon.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="icons/marriage-tab-icon.png">
 <meta name="theme-color" content="#0A2440">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -312,7 +312,7 @@ th:first-child,td:first-child{padding-left:0}
 const CONFIG = window.RCI_CONFIG;
 const onAppHost = CONFIG.appHosts.includes(location.hostname) && location.pathname.startsWith(CONFIG.appPath);
 const DEMO = new URLSearchParams(location.search).has("demo") || !onAppHost;
-const APP_VERSION = "65";
+const APP_VERSION = "66";
 
 /* ---------- content (moves to the Monthly Content list when live) ---------- */
 const TYPES = {
